@@ -73,7 +73,6 @@ CONFIG_DEFAULT: Dict[str, GSC] = {
         "同时跑的账号数，最大 30",
         5,
         max_value=30,
-        options=list(range(1, 31)),
     ),
     "NTESignMaster": GsBoolConfig(
         "签到结果推送给主人",
@@ -96,7 +95,6 @@ CONFIG_DEFAULT: Dict[str, GSC] = {
         "单个子任务连续失败到此次数就停止本轮",
         3,
         max_value=10,
-        options=list(range(1, 11)),
     ),
     "NTETaskActionDelay": GsTimeRConfig(
         "社区任务动作间隔（秒）",

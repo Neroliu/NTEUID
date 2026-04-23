@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import random
 import asyncio
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 from gsuid_core.logger import logger
 
@@ -49,8 +49,8 @@ async def _run_batch(users: List[NTEUser], header: str) -> str:
     if not users:
         return f"{header}\n  · {SignMsg.NO_SIGN_ACCOUNT}"
     groups = _group_by_center(users)
-    semaphore = asyncio.Semaphore(_sign_concurrency())
-    delay_lo, delay_hi = _batch_delay()
+    semaphore = asyncio.Semaphore(NTEConfig.get_config("NTESignConcurrency").data)
+    delay_lo, delay_hi = NTEConfig.get_config("NTESignBatchDelay").data
 
     async def _runner(group: List[NTEUser]) -> str:
         async with semaphore:
@@ -90,15 +90,3 @@ def _group_by_center(users: List[NTEUser]) -> List[List[NTEUser]]:
     for user in users:
         groups.setdefault(user.center_uid, []).append(user)
     return list(groups.values())
-
-
-def _sign_concurrency() -> int:
-    value = int(NTEConfig.get_config("NTESignConcurrency").data)
-    if not 1 <= value <= 30:
-        raise ValueError("NTESignConcurrency 必须在 1 到 30 之间")
-    return value
-
-
-def _batch_delay() -> Tuple[float, float]:
-    lo, hi = NTEConfig.get_config("NTESignBatchDelay").data
-    return float(lo), float(hi)
