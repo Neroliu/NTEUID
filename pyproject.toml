@@ -1,0 +1,21 @@
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+[project]
+name = "NTEUID"
+version = "0.1.0"
+description = "异环插件"
+authors = [{name = "tyql88"}]
+readme = "README.md"
+requires-python = ">=3.11, <4.0"
+dependencies = [
+    "pycryptodome>=3.20.0",
+]
+
+[tool.pyright]
+include = ["NTEUID"]
+venvPath = "../../.."
+venv = ".venv"
+pythonVersion = "3.11"
+typeCheckingMode = "basic"
