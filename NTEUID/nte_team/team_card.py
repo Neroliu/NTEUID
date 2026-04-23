@@ -164,7 +164,9 @@ async def draw_team_img(
             radius=12,
             fill=(232, 240, 250),
         )
-        draw.text((text_left + 56, y + 79), f"角色 #{recommendation.id}", font=nte_font_18, fill=COLOR_BLUE, anchor="mm")
+        draw.text(
+            (text_left + 56, y + 79), f"角色 #{recommendation.id}", font=nte_font_18, fill=COLOR_BLUE, anchor="mm"
+        )
         if len(prepared) > 1:
             tag_right = WIDTH - PADDING - 24
             tag_left = tag_right - 112

@@ -36,9 +36,7 @@ def format_role_home(home: "RoleHome") -> str:
 
     summary_parts: list[str] = []
     if home.achieve_progress is not None:
-        summary_parts.append(
-            f"成就 {home.achieve_progress.achievement_cnt}/{home.achieve_progress.total}"
-        )
+        summary_parts.append(f"成就 {home.achieve_progress.achievement_cnt}/{home.achieve_progress.total}")
     summary_parts.append(f"区域 {len(home.area_progress)}")
     if home.realestate is not None:
         summary_parts.append(f"房产 {home.realestate.total}")
@@ -92,11 +90,7 @@ def format_character_detail(character: "CharacterDetail") -> str:
     lines = [" · ".join(header_parts)]
     lines.append(f"进阶 Lv{character.alev} · 觉醒 {character.awaken_lev}")
     if character.properties:
-        prop_parts = [
-            f"{prop.name} {prop.value}"
-            for prop in character.properties[:6]
-            if prop.name
-        ]
+        prop_parts = [f"{prop.name} {prop.value}" for prop in character.properties[:6] if prop.name]
         if prop_parts:
             lines.append(" · ".join(prop_parts))
     all_skills = [*character.skills, *character.city_skills]
@@ -116,10 +110,7 @@ def format_achievement(progress: "AchievementProgress") -> str:
         head_parts.append(f"铜 {progress.bronze_umd_cnt}")
     lines = [" · ".join(head_parts)]
     categories = progress.detail
-    detail_lines = [
-        f"{_INDENT}{cat.name} {cat.progress}/{cat.total}"
-        for cat in categories
-    ]
+    detail_lines = [f"{_INDENT}{cat.name} {cat.progress}/{cat.total}" for cat in categories]
     lines.extend(_cap_list(detail_lines, len(categories)))
     return "\n".join(lines)
 
@@ -140,9 +131,7 @@ def format_realestate(houses: list["House"]) -> str:
         furniture_total = len(house.fdetail)
         if furniture_total:
             furniture_own = sum(1 for item in house.fdetail if item.own)
-            detail_lines.append(
-                f"{_INDENT}{house.name} {status} · 家具 {furniture_own}/{furniture_total}"
-            )
+            detail_lines.append(f"{_INDENT}{house.name} {status} · 家具 {furniture_own}/{furniture_total}")
         else:
             detail_lines.append(f"{_INDENT}{house.name} {status}")
     lines.extend(_cap_list(detail_lines, len(houses)))
@@ -151,9 +140,6 @@ def format_realestate(houses: list["House"]) -> str:
 
 def format_vehicles(vehicles: "VehicleList") -> str:
     lines = [f"载具 · 已购 {vehicles.own_cnt}/{vehicles.total}"]
-    detail_lines = [
-        f"{_INDENT}{vehicle.name} {'已购' if vehicle.own else '未购'}"
-        for vehicle in vehicles.detail
-    ]
+    detail_lines = [f"{_INDENT}{vehicle.name} {'已购' if vehicle.own else '未购'}" for vehicle in vehicles.detail]
     lines.extend(_cap_list(detail_lines, len(vehicles.detail)))
     return "\n".join(lines)

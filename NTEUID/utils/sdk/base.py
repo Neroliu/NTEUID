@@ -73,10 +73,7 @@ class BaseSdkClient:
         )
 
         tag = self.__class__.__name__
-        logger.debug(
-            f"[NTE-SDK] → {tag} {method} {self.BASE_URL}{path} "
-            f"query={query} body={body} headers={merged}"
-        )
+        logger.debug(f"[NTE-SDK] → {tag} {method} {self.BASE_URL}{path} query={query} body={body} headers={merged}")
 
         proxy: Optional[str] = None
         if _proxy_provider:
@@ -96,9 +93,7 @@ class BaseSdkClient:
             logger.debug(f"[NTE-SDK] ✗ {tag} {method} {path} 网络错误: {err!r}")
             raise self.error_cls(f"[{path}] 网络请求失败") from err
 
-        logger.debug(
-            f"[NTE-SDK] ← {tag} {method} {path} HTTP={resp.status_code} body={resp.text}"
-        )
+        logger.debug(f"[NTE-SDK] ← {tag} {method} {path} HTTP={resp.status_code} body={resp.text}")
 
         if resp.status_code >= 400:
             raise self.error_cls(

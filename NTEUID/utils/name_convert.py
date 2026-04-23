@@ -25,11 +25,7 @@ def _load_meta(path: Path) -> dict[str, RoleMeta]:
         return {}
     if not isinstance(raw, dict):
         return {}
-    return {
-        str(role_id): RoleMeta.model_validate(entry)
-        for role_id, entry in raw.items()
-        if isinstance(entry, dict)
-    }
+    return {str(role_id): RoleMeta.model_validate(entry) for role_id, entry in raw.items() if isinstance(entry, dict)}
 
 
 def load_role_meta() -> None:
