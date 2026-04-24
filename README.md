@@ -31,4 +31,6 @@
 
 ## 致谢
 
+- [Wuyi 无疑](https://github.com/KimigaiiWuyi)
 - [gsuid_core](https://github.com/Genshin-bots/gsuid_core)
+- [零号攻略组](https://space.bilibili.com/3546897499294077) · 角色攻略图

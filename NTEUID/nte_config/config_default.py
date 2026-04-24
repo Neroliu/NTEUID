@@ -111,6 +111,12 @@ CONFIG_DEFAULT: Dict[str, GSC] = {
         "自动签到多账号分批之间的 sleep 窗口 (min, max)",
         (0, 2),
     ),
+    "NTEGuide": GsListStrConfig(
+        "角色攻略图提供方",
+        "使用 nte 角色攻略时选择的提供方",
+        ["all"],
+        options=["all", "零号攻略组"],
+    ),
     "NTEProxyUrl": GsStrConfig(
         "代理地址",
         "SDK 请求走的代理（http://host:port），为空则直连",

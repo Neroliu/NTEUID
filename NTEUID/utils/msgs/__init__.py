@@ -96,6 +96,11 @@ class BindMsg:
     TOKEN_EMPTY = "未找到可用的塔吉多凭证"
 
 
+class GuideMsg:
+    CHAR_NOT_FOUND = "未找到角色【{char_name}】，请检查名称"
+    EMPTY = "角色【{char_name}】暂无攻略图"
+
+
 class NoticeMsg:
     SUBSCRIBE_GROUP_ONLY = "请在群聊中订阅"
     UNSUBSCRIBE_GROUP_ONLY = "请在群聊中取消订阅"
