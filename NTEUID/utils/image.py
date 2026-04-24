@@ -1,5 +1,6 @@
 import re
 import html
+import random
 import hashlib
 from typing import Tuple, Union, Optional
 from pathlib import Path
@@ -246,6 +247,31 @@ def paste_circle_image(
     canvas.paste(fitted, xy, circle_mask(diameter))
 
 
+def make_head_avatar(
+    avatar: Image.Image, size: int = 240, avatar_size: int = 200, frame_id: Optional[str] = None
+) -> Image.Image:
+    """头像 mask 裁圆 + head_ring 内圈 + 随机 texture2d/frame/*.png 外框。
+    `size` 是最终画布和外框尺寸；`avatar_size` 是头像直径，比 `size` 小越多、头像离外框越远。"""
+    head = avatar.convert("RGBA").resize((avatar_size, avatar_size))
+    mask = Image.open(TEXT_PATH / "head_mask.png").convert("L").resize((avatar_size, avatar_size))
+    head.putalpha(mask)
+    head_ring = Image.open(TEXT_PATH / "head_ring.png").convert("RGBA").resize((avatar_size, avatar_size))
+    head.alpha_composite(head_ring)
+
+    canvas = Image.new("RGBA", (size, size))
+    offset = (size - avatar_size) // 2
+    canvas.alpha_composite(head, (offset, offset))
+
+    frame_path = (
+        TEXT_PATH / "frame" / f"{frame_id}.png"
+        if frame_id
+        else random.choice(list((TEXT_PATH / "frame").glob("*.png")))
+    )
+    ring = Image.open(frame_path).convert("RGBA").resize((size, size))
+    canvas.alpha_composite(ring)
+    return canvas
+
+
 def clean_rich_text(text: str) -> str:
     raw = html.unescape(text)
     raw = raw.replace("\\n", "\n").replace("\r\n", "\n").replace("\r", "\n")
@@ -344,3 +370,35 @@ def get_smooth_drawer(scale: int = 4) -> SmoothDrawer:
 def get_nte_bg(w: int, h: int, bg: str = "bg") -> Image.Image:
     img = Image.open(TEXT_PATH / f"{bg}.jpg").convert("RGBA")
     return crop_center_img(img, w, h)
+
+
+def get_footer():
+    return Image.open(TEXT_PATH / "footer.png")
+
+
+def add_footer(
+    img: Image.Image,
+    w: int = 0,
+    offset_y: int = 0,
+    is_invert: bool = False,
+):
+    footer = Image.open(TEXT_PATH / "footer.png")
+    if is_invert:
+        r, g, b, a = footer.split()
+        rgb_image = Image.merge("RGB", (r, g, b))
+        rgb_image = ImageOps.invert(rgb_image.convert("RGB"))
+        r2, g2, b2 = rgb_image.split()
+        footer = Image.merge("RGBA", (r2, g2, b2, a))
+
+    if w != 0:
+        footer = footer.resize(
+            (w, int(footer.size[1] * w / footer.size[0])),
+        )
+
+    x, y = (
+        int((img.size[0] - footer.size[0]) / 2),
+        img.size[1] - footer.size[1] - 20 + offset_y,
+    )
+
+    img.paste(footer, (x, y), footer)
+    return img

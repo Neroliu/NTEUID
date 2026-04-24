@@ -9,7 +9,6 @@ class CharMeta(BaseModel):
     model_config = ConfigDict(extra="ignore")
     name: str = ""
     aliases: list[str] = []
-    avatar: str = ""
 
 
 class CharMetaFile(RootModel[dict[str, CharMeta]]):
@@ -22,7 +21,6 @@ class UserCharAliasFile(RootModel[dict[str, list[str]]]):
 
 char_alias_data: dict[str, list[str]] = {}
 char_id_to_name_data: dict[str, str] = {}
-char_id_to_avatar_data: dict[str, str] = {}
 
 
 def _load_char_meta_file() -> CharMetaFile:
@@ -47,11 +45,10 @@ def save_user_char_aliases(model: UserCharAliasFile) -> None:
 
 
 def load_char_meta() -> None:
-    global char_alias_data, char_id_to_name_data, char_id_to_avatar_data
+    global char_alias_data, char_id_to_name_data
 
     char_alias_data = {}
     char_id_to_name_data = {}
-    char_id_to_avatar_data = {}
 
     user_aliases = load_user_char_aliases().root
 
@@ -60,8 +57,6 @@ def load_char_meta() -> None:
             continue
 
         char_id_to_name_data[char_id] = meta.name
-        if meta.avatar:
-            char_id_to_avatar_data[char_id] = meta.avatar
 
         aliases: list[str] = []
         for alias in [*meta.aliases, *user_aliases.get(char_id, []), meta.name]:
@@ -103,7 +98,3 @@ def char_name_to_char_id(char_name: str | None) -> str | None:
 
 def alias_to_char_id(char_name: str | None) -> str:
     return char_name_to_char_id(char_name) or ""
-
-
-def char_id_to_avatar_url(char_id: str) -> str:
-    return char_id_to_avatar_data.get(char_id, "")

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from enum import IntEnum
-from typing import Any, List, Optional
+from enum import Enum, IntEnum
+from typing import Any, List, Tuple, Optional
 from dataclasses import dataclass
 
 from pydantic import Field, BaseModel, ConfigDict, ValidationError
@@ -11,6 +11,71 @@ from .base import SdkError
 
 class TajiduoError(SdkError):
     pass
+
+
+class CharQuality(str, Enum):
+    S = "ITEM_QUALITY_ORANGE"
+    A = "ITEM_QUALITY_PURPLE"
+    B = "ITEM_QUALITY_BLUE"
+    C = "ITEM_QUALITY_GREEN"
+    N = "ITEM_QUALITY_WHITE"
+
+    @property
+    def label(self) -> str:
+        return self.name
+
+    @property
+    def letter(self) -> str:
+        return self.name.lower()
+
+    @property
+    def rank(self) -> int:
+        return {
+            CharQuality.S: 4,
+            CharQuality.A: 3,
+            CharQuality.B: 2,
+            CharQuality.C: 1,
+            CharQuality.N: 0,
+        }[self]
+
+
+class CharElement(str, Enum):
+    PSYCHE = "CHARACTER_ELEMENT_TYPE_PSYCHE"
+    COSMOS = "CHARACTER_ELEMENT_TYPE_COSMOS"
+    NATURE = "CHARACTER_ELEMENT_TYPE_NATURE"
+    INCANTATION = "CHARACTER_ELEMENT_TYPE_INCANTATION"
+    CHAOS = "CHARACTER_ELEMENT_TYPE_CHAOS"
+    LAKSHANA = "CHARACTER_ELEMENT_TYPE_LAKSHANA"
+
+    @property
+    def label(self) -> str:
+        return {
+            CharElement.PSYCHE: "魂",
+            CharElement.COSMOS: "光",
+            CharElement.NATURE: "灵",
+            CharElement.INCANTATION: "咒",
+            CharElement.CHAOS: "暗",
+            CharElement.LAKSHANA: "相",
+        }[self]
+
+    @property
+    def color(self) -> Tuple[int, int, int]:
+        return {
+            CharElement.PSYCHE: (180, 110, 220),
+            CharElement.COSMOS: (245, 190, 80),
+            CharElement.NATURE: (95, 200, 150),
+            CharElement.INCANTATION: (110, 145, 220),
+            CharElement.CHAOS: (90, 90, 120),
+            CharElement.LAKSHANA: (220, 110, 110),
+        }[self]
+
+
+class CharGroup(str, Enum):
+    ONE = "CHARACTER_GROUP_TYPE_ONE"
+    TWO = "CHARACTER_GROUP_TYPE_TWO"
+    THREE = "CHARACTER_GROUP_TYPE_THREE"
+    FOUR = "CHARACTER_GROUP_TYPE_FOUR"
+    FIVE = "CHARACTER_GROUP_TYPE_FIVE"
 
 
 @dataclass
@@ -97,10 +162,12 @@ class RoleHomeAchieveProgress(_TajiduoModel):
 class RoleHomeAreaProgress(_TajiduoModel):
     id: str
     name: str
+    progress: int = 0
     total: int = 0
 
 
 class RoleHomeRealEstate(_TajiduoModel):
+    own_cnt: int = Field(0, alias="ownCnt")
     show_id: str = Field("", alias="showId")
     show_name: str = Field("", alias="showName")
     total: int = 0
@@ -117,15 +184,17 @@ class RoleHomeCharacter(_TajiduoModel):
     id: str
     name: str
     alev: int = 0
-    awaken_lev: int = Field(0, alias="awakenLev")
-    awaken_effect: List[str] = Field(default_factory=list, alias="awakenEffect")
-    element_type: str = Field("", alias="elementType")
-    group_type: str = Field("", alias="groupType")
-    quality: str = ""
     slev: int = 0
+    likeability_lev: int = Field(0, alias="likeabilitylev")
+    awaken_lev: int = Field(0, alias="awakenLev", description="觉醒等级")
+    awaken_effect: List[str] = Field(default_factory=list, alias="awakenEffect")
+    element_type: CharElement = Field(alias="elementType")
+    group_type: CharGroup = Field(alias="groupType")
+    quality: CharQuality
 
 
 class RoleHome(_TajiduoModel):
+    user_id: str = Field("", alias="userid")
     role_id: str = Field("", alias="roleid")
     role_name: str = Field("", alias="rolename")
     server_id: str = Field("", alias="serverid")
@@ -136,6 +205,9 @@ class RoleHome(_TajiduoModel):
     tycoon_level: int = Field(0, alias="tycoonLevel")
     role_login_days: int = Field(0, alias="roleloginDays")
     charid_cnt: int = Field(0, alias="charidCnt")
+    stamina_value: int = Field(0, alias="staminaValue")
+    city_stamina_value: int = Field(0, alias="citystaminaValue")
+    day_value: int = Field(0, alias="dayvalue")
     achieve_progress: Optional[RoleHomeAchieveProgress] = Field(None, alias="achieveProgress")
     area_progress: List[RoleHomeAreaProgress] = Field(default_factory=list, alias="areaProgress")
     realestate: Optional[RoleHomeRealEstate] = None
@@ -163,14 +235,39 @@ class CharacterSkill(_TajiduoModel):
 
 
 class CharacterFork(_TajiduoModel):
+    """角色武器（弧盘）。`name` 是弧盘显示名（如 "预备备"），`buff_name` 是绑定 Buff 名（如 "「司令虎符」"）。
+    `id` 形如 `fork_<拼音>`，走 `{CDN}/character/fork/<id>.png` 出图；未持有时 `id` 为空串。"""
+
     id: str = ""
+    name: str = ""
     alev: str = ""
     blev: str = ""
     slev: str = ""
+    quality: Optional[CharQuality] = None
+    group_type: Optional[CharGroup] = Field(None, alias="groupType")
+    des: str = ""
+    buff_name: str = Field("", alias="buffName")
+    buff_des: str = Field("", alias="buffDes")
+    lbd: List[str] = Field(default_factory=list)
+    properties: List[CharacterProperty] = Field(default_factory=list)
+
+
+class CharacterSuitItem(_TajiduoModel):
+    id: str = ""
+    name: str = ""
+    lev: int = 0
+    main_properties: List[CharacterProperty] = Field(default_factory=list, alias="mainProperties")
     properties: List[CharacterProperty] = Field(default_factory=list)
 
 
 class CharacterSuit(_TajiduoModel):
+    id: str = ""
+    name: str = ""
+    des2: str = ""
+    des4: str = ""
+    suit_condition: List[str] = Field(default_factory=list, alias="suitCondition")
+    core: List[CharacterSuitItem] = Field(default_factory=list)
+    pie: List[CharacterSuitItem] = Field(default_factory=list)
     suit_activate_num: int = Field(0, alias="suitActivateNum")
 
 
@@ -178,15 +275,17 @@ class CharacterDetail(_TajiduoModel):
     id: str
     name: str
     alev: int = 0
+    slev: int = 0
+    likeability_lev: int = Field(0, alias="likeabilitylev")
     awaken_lev: int = Field(0, alias="awakenLev")
     awaken_effect: List[str] = Field(default_factory=list, alias="awakenEffect")
-    element_type: str = Field("", alias="elementType")
-    group_type: str = Field("", alias="groupType")
-    quality: str = ""
+    element_type: CharElement = Field(alias="elementType")
+    group_type: CharGroup = Field(alias="groupType")
+    quality: CharQuality
     properties: List[CharacterProperty] = Field(default_factory=list)
     skills: List[CharacterSkill] = Field(default_factory=list)
     city_skills: List[CharacterSkill] = Field(default_factory=list, alias="citySkills")
-    fork: CharacterFork = Field(default_factory=CharacterFork)
+    fork: CharacterFork = Field(default_factory=lambda: CharacterFork(groupType=None, buffName="", buffDes=""))
     suit: CharacterSuit = Field(default_factory=lambda: CharacterSuit(suitActivateNum=0))
 
 
@@ -210,11 +309,14 @@ class AreaDetailItem(_TajiduoModel):
     id: str
     name: str
     total: int = 0
+    # 未开启/未解锁的子项服务端会给 null
+    progress: Optional[int] = None
 
 
 class AreaProgress(_TajiduoModel):
     id: str
     name: str
+    progress: int = 0
     total: int = 0
     detail: List[AreaDetailItem] = Field(default_factory=list)
 
@@ -229,13 +331,35 @@ class House(_TajiduoModel):
     id: str
     name: str
     own: bool = False
+    # 居住角色 id 列表的 JSON 字符串，如 "[1019]"；缺省房源没有
+    chars: str = ""
     fdetail: List[Furniture] = Field(default_factory=list)
+
+
+class VehicleBaseStat(_TajiduoModel):
+    name: str
+    # 接口里全部是字符串（"146"、"18000"），不做 int 转换
+    value: str = ""
+
+
+class VehicleAdvancedStat(VehicleBaseStat):
+    max: str = ""
+
+
+class VehicleModel(_TajiduoModel):
+    """装饰 / 涂装子条目。`type` 才是 `{CDN}/verhicle/model/{type}.png` 的 id。"""
+
+    id: str = ""
+    type: str = ""
 
 
 class Vehicle(_TajiduoModel):
     id: str
     name: str
     own: bool = False
+    base: List[VehicleBaseStat] = Field(default_factory=list)
+    advanced: List[VehicleAdvancedStat] = Field(default_factory=list)
+    models: List[VehicleModel] = Field(default_factory=list)
 
 
 class VehicleList(_TajiduoModel):

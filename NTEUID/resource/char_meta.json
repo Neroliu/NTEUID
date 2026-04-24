@@ -1,70 +1,60 @@
 {
   "1003": {
     "name": "早雾",
-    "avatar": "https://webstatic.tajiduo.com/bbs/pic/player_003_256.png",
     "aliases": [
       "早雾"
     ]
   },
   "1008": {
     "name": "翳",
-    "avatar": "https://webstatic.tajiduo.com/bbs/pic/player_008_256.png",
     "aliases": [
       "翳"
     ]
   },
   "1010": {
     "name": "娜娜莉",
-    "avatar": "https://webstatic.tajiduo.com/bbs/pic/player_010_256.png",
     "aliases": [
       "娜娜莉"
     ]
   },
   "1019": {
     "name": "薄荷",
-    "avatar": "https://webstatic.tajiduo.com/bbs/pic/player_019_256.png",
     "aliases": [
       "薄荷"
     ]
   },
   "1020": {
     "name": "哈尼娅",
-    "avatar": "https://webstatic.tajiduo.com/bbs/pic/player_020_256.png",
     "aliases": [
       "哈尼娅"
     ]
   },
   "1021": {
     "name": "埃德嘉",
-    "avatar": "https://webstatic.tajiduo.com/bbs/pic/player_021_256.png",
     "aliases": [
       "埃德嘉"
     ]
   },
   "1023": {
     "name": "白藏",
-    "avatar": "https://webstatic.tajiduo.com/bbs/pic/player_028_256.png",
     "aliases": [
       "白藏"
     ]
   },
   "1025": {
     "name": "哈索尔",
-    "avatar": "https://webstatic.tajiduo.com/bbs/pic/player_012_256.png",
     "aliases": [
       "哈索尔"
     ]
   },
   "1033": {
     "name": "阿德勒",
-    "avatar": "https://webstatic.tajiduo.com/bbs/pic/player_015_256.png",
     "aliases": [
       "阿德勒"
     ]
   },
   "1039": {
     "name": "法帝娅",
-    "avatar": "https://webstatic.tajiduo.com/bbs/pic/player_027_256.png",
     "aliases": [
       "法帝娅",
       "法蒂娅"
@@ -72,7 +62,6 @@
   },
   "1046": {
     "name": "异能者·零(男)",
-    "avatar": "https://webstatic.tajiduo.com/bbs/pic/player_nanzhu_256.png",
     "aliases": [
       "异能者·零(男)",
       "异能者零男",
@@ -81,7 +70,6 @@
   },
   "1051": {
     "name": "异能者·零(女)",
-    "avatar": "https://webstatic.tajiduo.com/bbs/pic/player_009_256.png",
     "aliases": [
       "异能者·零(女)",
       "异能者零女",
@@ -90,28 +78,24 @@
   },
   "1054": {
     "name": "达芙蒂尔",
-    "avatar": "https://webstatic.tajiduo.com/bbs/pic/player_005_256.png",
     "aliases": [
       "达芙蒂尔"
     ]
   },
   "1055": {
     "name": "九原",
-    "avatar": "https://webstatic.tajiduo.com/bbs/pic/player_104_256.png",
     "aliases": [
       "九原"
     ]
   },
   "1070": {
     "name": "海月",
-    "avatar": "https://webstatic.tajiduo.com/bbs/pic/player_haiyue_256.png",
     "aliases": [
       "海月"
     ]
   },
   "1073": {
     "name": "小吱",
-    "avatar": "https://webstatic.tajiduo.com/bbs/pic/player_xiaozhi_256.png",
     "aliases": [
       "小吱"
     ]

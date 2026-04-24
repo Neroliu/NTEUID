@@ -6,9 +6,9 @@ from gsuid_core.bot import Bot
 from gsuid_core.logger import logger
 from gsuid_core.models import Event
 
+from .role_card import draw_role_card_img
 from .role_text import (
     format_vehicles,
-    format_role_home,
     format_realestate,
     format_achievement,
     format_area_progress,
@@ -55,7 +55,9 @@ async def run_role_home(bot: Bot, ev: Event) -> None:
         logger.warning(f"[NTE角色面板] 账号 {user.center_uid} 拉取失败: {error.message}")
         return await send_nte_notify(bot, ev, RoleMsg.LOAD_FAILED)
 
-    await bot.send(format_role_home(home))
+    cached = await load_role_characters_cache(role_id)
+    characters = [CharacterDetail.model_validate(item) for item in cached] if cached else []
+    await bot.send(await draw_role_card_img(ev, home, characters, user.role_name))
 
 
 async def run_character_detail(bot: Bot, ev: Event, char_name: str) -> None:

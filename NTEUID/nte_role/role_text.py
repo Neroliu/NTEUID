@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from .role_meta import ELEMENT_META, QUALITY_RANK, QUALITY_LABEL
 from ..nte_config.prefix import NTE_PREFIX
+from ..utils.sdk.tajiduo_model import CharQuality
 
 if TYPE_CHECKING:
     from ..utils.sdk.tajiduo_model import (
@@ -51,28 +51,10 @@ def format_refresh_summary(characters: list["CharacterDetail"]) -> str:
     total = len(characters)
     lines = [f"已刷新 {total} 个角色"]
     if total:
-        buckets: dict[str, int] = {}
+        buckets: dict[CharQuality, int] = {}
         for character in characters:
-            label = QUALITY_LABEL.get(character.quality, "其它")
-            buckets[label] = buckets.get(label, 0) + 1
-        ordered_keys = sorted(
-            QUALITY_LABEL.keys(),
-            key=lambda key: QUALITY_RANK.get(key, -1),
-            reverse=True,
-        )
-        seen_labels: set[str] = set()
-        parts: list[str] = []
-        for quality_key in ordered_keys:
-            label = QUALITY_LABEL[quality_key]
-            if label in seen_labels:
-                continue
-            seen_labels.add(label)
-            count = buckets.get(label, 0)
-            if count:
-                parts.append(f"{label} {count}")
-        other = buckets.get("其它", 0)
-        if other:
-            parts.append(f"其它 {other}")
+            buckets[character.quality] = buckets.get(character.quality, 0) + 1
+        parts = [f"{q.label} {buckets[q]}" for q in CharQuality if q in buckets]
         if parts:
             lines.append("品质 " + " · ".join(parts))
     lines.append(f"使用 `{NTE_PREFIX}<角色名>面板` 查看详情")
@@ -80,13 +62,7 @@ def format_refresh_summary(characters: list["CharacterDetail"]) -> str:
 
 
 def format_character_detail(character: "CharacterDetail") -> str:
-    header_parts: list[str] = [character.name]
-    quality_label = QUALITY_LABEL.get(character.quality, "")
-    if quality_label:
-        header_parts.append(quality_label)
-    element_meta = ELEMENT_META.get(character.element_type)
-    if element_meta:
-        header_parts.append(element_meta[0])
+    header_parts: list[str] = [character.name, character.quality.label, character.element_type.label]
     lines = [" · ".join(header_parts)]
     lines.append(f"进阶 Lv{character.alev} · 觉醒 {character.awaken_lev}")
     if character.properties:

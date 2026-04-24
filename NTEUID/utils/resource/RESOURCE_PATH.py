@@ -25,9 +25,39 @@ USER_CHAR_ALIAS_PATH = ALIAS_PATH / "char_alias.json"
 ROLE_PATH = MAIN_PATH / "role"
 ROLE_CARD_PATH = ROLE_PATH / "card"
 ROLE_ART_PATH = ROLE_PATH / "detail"
+ROLE_TALL_PATH = ROLE_PATH / "tall"
 ROLE_SKILL_PATH = ROLE_PATH / "skill"
 ROLE_CITY_SKILL_PATH = ROLE_PATH / "city_skill"
 ROLE_AVATAR_PATH = ROLE_PATH / "avatar"
+ROLE_GROUP_PATH = ROLE_PATH / "group"
+ROLE_GROUP_BLACK_PATH = ROLE_PATH / "group_black"
+ROLE_ELEMENT_PATH = ROLE_PATH / "element"
+ROLE_AWAKEN_PATH = ROLE_PATH / "awaken"
+ROLE_PROPERTY_PATH = ROLE_PATH / "property"
+ROLE_SUIT_DETAIL_PATH = ROLE_PATH / "suit" / "detail"
+ROLE_SUIT_DRIVE_PATH = ROLE_PATH / "suit" / "drive"
+
+# 武器（弧盘）
+WEAPON_PATH = MAIN_PATH / "weapon"
+
+# 车辆
+VEHICLE_PATH = MAIN_PATH / "vehicle"
+VEHICLE_MODEL_PATH = VEHICLE_PATH / "model"
+VEHICLE_WIDE_PATH = VEHICLE_PATH / "wide"
+
+# 区域
+AREA_PATH = MAIN_PATH / "area"
+AREA_WIDE_PATH = AREA_PATH / "wide"
+AREA_SMALL_PATH = AREA_PATH / "small"
+AREA_TYPE_PATH = AREA_PATH / "type"
+
+# 成就
+ACHIEVEMENT_PATH = MAIN_PATH / "achievement"
+
+# 房产
+REALESTATE_PATH = MAIN_PATH / "realestate"
+REALESTATE_DETAIL_PATH = REALESTATE_PATH / "detail"
+REALESTATE_FURNITURE_PATH = REALESTATE_PATH / "fdetail"
 
 # 其他
 OTHER_PATH = MAIN_PATH / "other"
@@ -42,7 +72,6 @@ def init_dir():
         MAIN_PATH,
         PLAYERINFO_PATH,
         RESOURCE_PATH,
-        ROLE_AVATAR_PATH,
         OTHER_PATH,
         NOTICE_PATH,
         TEAM_PATH,
@@ -50,8 +79,29 @@ def init_dir():
         ROLE_PATH,
         ROLE_CARD_PATH,
         ROLE_ART_PATH,
+        ROLE_TALL_PATH,
         ROLE_SKILL_PATH,
         ROLE_CITY_SKILL_PATH,
+        ROLE_AVATAR_PATH,
+        ROLE_GROUP_PATH,
+        ROLE_GROUP_BLACK_PATH,
+        ROLE_ELEMENT_PATH,
+        ROLE_AWAKEN_PATH,
+        ROLE_PROPERTY_PATH,
+        WEAPON_PATH,
+        ROLE_SUIT_DETAIL_PATH,
+        ROLE_SUIT_DRIVE_PATH,
+        VEHICLE_PATH,
+        VEHICLE_MODEL_PATH,
+        VEHICLE_WIDE_PATH,
+        AREA_PATH,
+        AREA_WIDE_PATH,
+        AREA_SMALL_PATH,
+        AREA_TYPE_PATH,
+        ACHIEVEMENT_PATH,
+        REALESTATE_PATH,
+        REALESTATE_DETAIL_PATH,
+        REALESTATE_FURNITURE_PATH,
         QR_PATH,
         ALIAS_PATH,
     ]:
