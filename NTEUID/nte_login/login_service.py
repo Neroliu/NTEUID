@@ -297,6 +297,9 @@ async def refresh_all_user_tokens(user_id: str, bot_id: str) -> List[Tuple[str, 
             continue
         ok = await refresh_user_token(user)
         results.append((user.center_uid, ok, "" if ok else "凭证已失效"))
+    if users:
+        # 把初始 head 推回最新，避免末个成功 refresh 顶掉活跃账号。
+        await NTEUser.touch_account(user_id, bot_id, users[0].center_uid)
     return results
 
 

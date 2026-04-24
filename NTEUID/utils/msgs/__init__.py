@@ -8,7 +8,7 @@ class CommonMsg:
     from ...nte_config.prefix import NTE_PREFIX
 
     NOT_LOGGED_IN = "尚未登录塔吉多账号"
-    LOGIN_EXPIRED = f"登录已失效，请重新发送【{NTE_PREFIX}登录】"
+    LOGIN_EXPIRED = f"登录已失效，请先发送【{NTE_PREFIX}刷新令牌】尝试续签，失败后再【{NTE_PREFIX}登录】"
     RETRY_LATER = "服务暂时不可用，请稍后再试"
 
 
