@@ -11,7 +11,6 @@ from .role_text import (
     format_vehicles,
     format_realestate,
     format_achievement,
-    format_area_progress,
     format_refresh_summary,
     format_character_detail,
 )
@@ -121,24 +120,6 @@ async def run_achievement(bot: Bot, ev: Event) -> None:
         return await send_nte_notify(bot, ev, RoleMsg.EMPTY)
 
     await bot.send(format_achievement(achievement))
-
-
-async def run_area_progress(bot: Bot, ev: Event) -> None:
-    ctx = await _ensure_ctx(bot, ev, "区域探索")
-    if ctx is None:
-        return
-    user, client, role_id = ctx
-
-    try:
-        areas = await client.get_role_area_progress(role_id)
-    except TajiduoError as error:
-        logger.warning(f"[NTE区域探索] 账号 {user.center_uid} 拉取失败: {error.message}")
-        return await send_nte_notify(bot, ev, RoleMsg.LOAD_FAILED)
-
-    if not areas:
-        return await send_nte_notify(bot, ev, RoleMsg.EMPTY)
-
-    await bot.send(format_area_progress(areas))
 
 
 async def run_realestate(bot: Bot, ev: Event) -> None:

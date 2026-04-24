@@ -7,7 +7,6 @@ from .role_service import (
     run_role_home,
     run_realestate,
     run_achievement,
-    run_area_progress,
     run_character_detail,
     run_refresh_role_panel,
 )
@@ -17,7 +16,6 @@ sv_nte_role_home = SV("nte角色面板")
 sv_nte_role_refresh = SV("nte刷新面板")
 sv_nte_role_detail = SV("nte角色详情")
 sv_nte_achievement = SV("nte成就进度")
-sv_nte_area = SV("nte区域探索")
 sv_nte_realestate = SV("nte房产")
 sv_nte_vehicle = SV("nte载具")
 
@@ -56,11 +54,6 @@ async def nte_role_detail(bot: Bot, ev: Event):
 @sv_nte_achievement.on_fullmatch(("成就进度", "成就"))
 async def nte_achievement(bot: Bot, ev: Event):
     await run_achievement(bot, ev)
-
-
-@sv_nte_area.on_fullmatch(("探索", "探索度"), block=True)
-async def nte_area(bot: Bot, ev: Event):
-    await run_area_progress(bot, ev)
 
 
 @sv_nte_realestate.on_fullmatch(("我的房产", "房产"))

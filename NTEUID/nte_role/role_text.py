@@ -10,7 +10,6 @@ if TYPE_CHECKING:
         House,
         RoleHome,
         VehicleList,
-        AreaProgress,
         CharacterDetail,
         AchievementProgress,
     )
@@ -88,13 +87,6 @@ def format_achievement(progress: "AchievementProgress") -> str:
     categories = progress.detail
     detail_lines = [f"{_INDENT}{cat.name} {cat.progress}/{cat.total}" for cat in categories]
     lines.extend(_cap_list(detail_lines, len(categories)))
-    return "\n".join(lines)
-
-
-def format_area_progress(areas: list["AreaProgress"]) -> str:
-    lines = [f"区域探索 · {len(areas)} 个地图"]
-    detail_lines = [f"{_INDENT}{area.name} {area.total}" for area in areas]
-    lines.extend(_cap_list(detail_lines, len(areas)))
     return "\n".join(lines)
 
 
