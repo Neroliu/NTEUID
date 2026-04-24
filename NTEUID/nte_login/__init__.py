@@ -6,12 +6,15 @@ from gsuid_core.models import Event
 
 from . import login_router
 from ..utils.msgs import LoginMsg, send_nte_notify
+from .bind_service import view_bindings, switch_binding, get_laohu_tokens
 from .login_service import request_login, login_by_laohu_token, refresh_all_user_tokens
 from ..utils.database import NTEUser
 
 _ = login_router  # 纯副作用 import：FastAPI 路由在模块加载时注册
 
 sv_nte_login = SV("nte登录")
+sv_nte_bind = SV("nte绑定")
+sv_nte_get_token = SV("nte获取laohutoken", area="DIRECT")
 
 
 @sv_nte_login.on_command(("登录", "login"))
@@ -37,6 +40,23 @@ async def nte_logout_cmd(bot: Bot, ev: Event):
     if not deleted:
         return await send_nte_notify(bot, ev, LoginMsg.NOT_LOGGED_IN)
     await send_nte_notify(bot, ev, LoginMsg.LOGOUT_DONE)
+
+
+@sv_nte_get_token.on_fullmatch(
+    ("获取laohutoken", "获取laohuToken", "获取LAOHUTOKEN", "获取laohu令牌"),
+    block=True,
+)
+async def nte_get_token_cmd(bot: Bot, ev: Event):
+    await get_laohu_tokens(bot, ev)
+
+
+@sv_nte_bind.on_command(("切换", "查看"), block=True)
+async def nte_bind_cmd(bot: Bot, ev: Event):
+    target = re.sub(r'["\n\t ]+', "", ev.text.strip())
+
+    if "查看" in ev.command:
+        return await view_bindings(bot, ev)
+    return await switch_binding(bot, ev, target)
 
 
 @sv_nte_login.on_fullmatch(("刷新令牌", "刷新token", "续签"))

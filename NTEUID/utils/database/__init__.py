@@ -255,6 +255,24 @@ class NTEUser(User, table=True):
 
     @classmethod
     @with_session
+    async def touch_account(
+        cls: Type[T_NTEUser],
+        session: AsyncSession,
+        user_id: str,
+        bot_id: str,
+        center_uid: str,
+        when: Optional[datetime] = None,
+    ) -> int:
+        """设 updated_at（默认当前）；显式 `.values(updated_at=...)` 不被 `onupdate` 覆盖，`get_active` 按 updated_at desc 选活跃账号。"""
+        stmt = (
+            update(cls)
+            .where(col(cls.user_id) == user_id, col(cls.bot_id) == bot_id, col(cls.center_uid) == center_uid)
+            .values(updated_at=datetime.now() if when is None else when)
+        )
+        return cast(CursorResult, await session.execute(stmt)).rowcount
+
+    @classmethod
+    @with_session
     async def delete_all(
         cls: Type[T_NTEUser],
         session: AsyncSession,

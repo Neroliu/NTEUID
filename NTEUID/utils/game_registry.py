@@ -16,3 +16,8 @@ GAME_SIGN_SWITCHES: Dict[str, Optional[str]] = {
 }
 
 PRIMARY_GAME_ID: str = next(iter(GAME_SIGN_SWITCHES))
+
+GAME_LABELS: Dict[str, str] = {
+    GAME_ID_YIHUAN: "异环",
+    GAME_ID_HUANTA: "幻塔",
+}

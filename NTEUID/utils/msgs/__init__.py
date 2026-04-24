@@ -86,6 +86,16 @@ class TeamMsg:
     USAGE_DETAIL = f"用法：{NTE_PREFIX}<角色名>配队，例如 {NTE_PREFIX}娜娜莉配队"
 
 
+class BindMsg:
+    from ...nte_config.prefix import NTE_PREFIX
+
+    NOT_LOGGED_IN = f"{CommonMsg.NOT_LOGGED_IN}，请先发送【{NTE_PREFIX}登录】"
+    ONLY_ONE_ACCOUNT = "当前仅绑定了 1 个塔吉多账号，无需切换"
+    TARGET_NOT_FOUND = f"未在已绑定账号中找到目标，可先发送【{NTE_PREFIX}查看】确认"
+    SWITCH_DONE = "已切换到塔吉多账号 {center_uid}"
+    TOKEN_EMPTY = "未找到可用的塔吉多凭证"
+
+
 class NoticeMsg:
     SUBSCRIBE_GROUP_ONLY = "请在群聊中订阅"
     UNSUBSCRIBE_GROUP_ONLY = "请在群聊中取消订阅"
