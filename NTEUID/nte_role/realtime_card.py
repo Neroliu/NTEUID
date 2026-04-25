@@ -211,10 +211,9 @@ async def draw_realtime_img(ev: Event, home: RoleHome, role_name: str):
         (inner_left + half_w + (half_w - STAT_ICON_SIZE - round(80 * SCALE) // 2) // 2, overlay_top_y),
     )
 
-    # 下半行：活跃度 + | + 周本次数（深底区）
-    bottom_band_y = bg_y + BG_IMG_H - round(46 * SCALE)
+    # 下半行：活跃度 + | + 周本次数；cy 落在 bg 暗带视觉中心（暗带在 bg 0.63~0.89 区间）
     third = inner_w // 3
-    cy = bottom_band_y + round(20 * SCALE)
+    cy = bg_y + round(BG_IMG_H * 0.76)
     sep_x = inner_left + inner_w // 2
     draw.line(
         [(sep_x, cy - SEPARATOR_HEIGHT // 2), (sep_x, cy + SEPARATOR_HEIGHT // 2)],
