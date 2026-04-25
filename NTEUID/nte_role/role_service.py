@@ -8,7 +8,6 @@ from gsuid_core.models import Event
 
 from .role_card import draw_role_card_img
 from .role_text import (
-    format_vehicles,
     format_achievement,
     format_refresh_summary,
     format_character_detail,
@@ -16,6 +15,7 @@ from .role_text import (
 from .role_cache import load_role_characters_cache, save_role_characters_cache
 from ..utils.msgs import RoleMsg, send_nte_notify
 from .explore_card import draw_explore_img
+from .vehicle_card import draw_vehicle_img
 from .realtime_card import draw_realtime_img
 from ..utils.session import ensure_tajiduo_client
 from ..utils.database import NTEUser
@@ -190,4 +190,4 @@ async def run_vehicles(bot: Bot, ev: Event) -> None:
     if not vehicles.detail:
         return await send_nte_notify(bot, ev, RoleMsg.EMPTY)
 
-    await bot.send(format_vehicles(vehicles))
+    await bot.send(await draw_vehicle_img(ev, vehicles, user.role_name))
