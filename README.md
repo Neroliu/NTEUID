@@ -1,7 +1,7 @@
 # NTEUID
 
 <p align="center">
-  <a href="https://github.com/Genshin-bots/gsuid_core/tree/main/gsuid_core/plugins/NTEUID"><img src="ICON.png" width="256" height="256" alt="NTEUID"></a>
+  <a href="https://github.com/tyql688/NTEUID"><img src="ICON.png" width="256" height="256" alt="NTEUID"></a>
 </p>
 <h1 align="center">NTEUID 0.1.0</h1>
 <h4 align = "center">🚧支持OneBot(QQ)、QQ频道、微信、开黑啦、Telegram的异环插件🚧</h4>
@@ -23,6 +23,10 @@
 > 如需手动指定登录地址，可在配置中填写 `NTELoginUrl`
 >
 > 🚧 插件仍在持续完善中 🚧
+>
+> 交流反馈群 662548513
+>
+> ✨ 如果需要添加其他异环相关功能欢迎在 issues 中提出 ✨
 
 ## 丨其他
 
@@ -33,4 +37,7 @@
 
 - [Wuyi 无疑](https://github.com/KimigaiiWuyi)
 - [gsuid_core](https://github.com/Genshin-bots/gsuid_core)
-- [零号攻略组](https://space.bilibili.com/3546897499294077) · 角色攻略图
+
+## 攻略组
+
+- [零号攻略组](https://space.bilibili.com/3546897499294077)

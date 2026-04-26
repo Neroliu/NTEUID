@@ -169,7 +169,7 @@ async def _draw_area_cards(canvas: Image.Image, y: int, areas: list[RoleHomeArea
         card_x = PADDING + col * (card_w + GRID_GAP)
         card_y = y + row * (card_h + GRID_GAP)
 
-        # DNAUID 套路：mask/bg 都用原生尺寸，组装完再 resize 到 card slot
+        # 套路：mask/bg 都用原生尺寸，组装完再 resize 到 card slot
         mine_bg = exp_bg_raw.copy()
         try:
             temp_bg = Image.new("RGBA", exp_mask.size)
@@ -244,7 +244,7 @@ def _draw_char_grid(canvas: Image.Image, y: int, chars: list[_CharStat]) -> int:
         cx = PADDING + col * (card_w + GRID_GAP)
         cy = y + row * (card_h + GRID_GAP)
 
-        # DNAUID 套路：所有操作都在 mask/bg 原生尺寸上，mask 不 resize
+        # 套路：所有操作都在 mask/bg 原生尺寸上，mask 不 resize
         mine_bg = _load_char_bg(char.quality).copy()
         if char.avatar is not None:
             temp_bg = Image.new("RGBA", mask.size)
