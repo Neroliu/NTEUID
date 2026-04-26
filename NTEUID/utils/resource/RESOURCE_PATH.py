@@ -63,7 +63,7 @@ REALESTATE_FURNITURE_PATH = REALESTATE_PATH / "fdetail"
 OTHER_PATH = MAIN_PATH / "other"
 NOTICE_PATH = OTHER_PATH / "notice"
 TEAM_PATH = OTHER_PATH / "team"
-SIGN_RECORD_PATH = OTHER_PATH / "sign_record"
+SIGN_CALENDAR_PATH = OTHER_PATH / "sign_calendar"
 QR_PATH = OTHER_PATH / "qr"
 
 
@@ -75,7 +75,7 @@ def init_dir():
         OTHER_PATH,
         NOTICE_PATH,
         TEAM_PATH,
-        SIGN_RECORD_PATH,
+        SIGN_CALENDAR_PATH,
         ROLE_PATH,
         ROLE_CARD_PATH,
         ROLE_ART_PATH,

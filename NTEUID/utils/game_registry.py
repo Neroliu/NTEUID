@@ -21,3 +21,9 @@ GAME_LABELS: Dict[str, str] = {
     GAME_ID_YIHUAN: "异环",
     GAME_ID_HUANTA: "幻塔",
 }
+
+# 顶部 banner 资源 key —— `utils/texture2d/home-{key}.webp`
+GAME_BANNER_KEYS: Dict[str, str] = {
+    GAME_ID_YIHUAN: "yihuan",
+    GAME_ID_HUANTA: "huanta",
+}

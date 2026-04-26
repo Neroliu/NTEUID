@@ -49,15 +49,8 @@ class SignMsg:
     AUTO_NO_ACCOUNT = CommonMsg.NOT_LOGGED_IN
     AUTO_ENABLED = "已开启自动签到"
     AUTO_DISABLED = "已关闭自动签到"
-
-
-class SignRecordMsg:
-    from ...nte_config.prefix import NTE_PREFIX
-
-    NOT_LOGGED_IN = f"{CommonMsg.NOT_LOGGED_IN}，请先发送【{NTE_PREFIX}登录】"
-    LOGIN_EXPIRED = CommonMsg.LOGIN_EXPIRED
-    LOAD_FAILED = "签到记录暂时无法获取，请稍后再试"
-    EMPTY = "暂无签到奖励记录"
+    CALENDAR_LOAD_FAILED = "签到日历加载失败，请稍后再试"
+    CALENDAR_EMPTY = "暂无签到奖励数据"
 
 
 class RoleMsg:

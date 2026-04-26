@@ -13,14 +13,15 @@ from .sign_runner import (
     run_user_sign,
     run_scheduled_sign,
 )
-from .sign_records import run_sign_records
+from .sign_calendar import run_sign_calendar
 from ..utils.database import NTEUser, NTESignRecord
+from ..utils.constants import GAME_ID_HUANTA, GAME_ID_YIHUAN
 from ..nte_config.nte_config import NTEConfig
 
 sv_nte_sign = SV("nte签到")
 sv_nte_sign_all = SV("nte全部签到", pm=1)
 sv_nte_auto = SV("nte自动签到")
-sv_nte_sign_records = SV("nte签到记录")
+sv_nte_sign_calendar = SV("nte签到日历")
 
 _sign_hour, _sign_minute = NTEConfig.get_config("NTESignTime").data
 
@@ -52,9 +53,14 @@ async def nte_disable_auto(bot: Bot, ev: Event):
     await send_nte_notify(bot, ev, msg)
 
 
-@sv_nte_sign_records.on_fullmatch(("签到记录", "签到历史"))
-async def nte_sign_records(bot: Bot, ev: Event):
-    await run_sign_records(bot, ev)
+@sv_nte_sign_calendar.on_fullmatch(("签到日历", "每日签到", "签到一览", "签到记录", "签到历史"))
+async def nte_sign_calendar_yihuan(bot: Bot, ev: Event):
+    await run_sign_calendar(bot, ev, GAME_ID_YIHUAN)
+
+
+@sv_nte_sign_calendar.on_fullmatch(("幻塔签到日历", "幻塔每日签到", "幻塔签到一览", "幻塔签到记录", "幻塔签到历史"))
+async def nte_sign_calendar_huanta(bot: Bot, ev: Event):
+    await run_sign_calendar(bot, ev, GAME_ID_HUANTA)
 
 
 @scheduler.scheduled_job("cron", hour=_sign_hour, minute=_sign_minute)

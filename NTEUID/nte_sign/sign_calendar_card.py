@@ -1,0 +1,284 @@
+from __future__ import annotations
+
+from typing import List
+from pathlib import Path
+
+from PIL import Image, ImageDraw
+
+from gsuid_core.models import Event
+from gsuid_core.utils.image.convert import convert_img
+from gsuid_core.utils.image.image_tools import get_event_avatar
+
+from ..utils.image import (
+    COLOR_WHITE,
+    COLOR_OVERLAY,
+    COLOR_SUBTEXT,
+    add_footer,
+    cache_name,
+    get_nte_bg,
+    rounded_mask,
+    get_nte_title_bg,
+    make_head_avatar,
+    download_pic_from_url,
+)
+from ..utils.game_registry import GAME_LABELS, GAME_BANNER_KEYS
+from ..utils.fonts.nte_fonts import (
+    nte_font_30,
+    nte_font_42,
+    nte_font_origin,
+)
+from ..utils.sdk.tajiduo_model import GameSignState, GameSignReward
+from ..utils.resource.RESOURCE_PATH import SIGN_CALENDAR_PATH
+
+WIDTH = 1080
+PADDING = 36
+HEADER_HEIGHT = 152
+FOOTER_RESERVE = 80
+AVATAR_SIZE = 200
+AVATAR_INNER = 160
+AVATAR_OVERSHOOT_BELOW = 67
+AVATAR_X = PADDING
+AVATAR_Y = HEADER_HEIGHT - (AVATAR_SIZE - AVATAR_OVERSHOOT_BELOW)
+BODY_TOP_GAP = -56  # logo 上沿压入 title 区，与头像视觉对齐
+
+# 官方 webview design-width=390，渲染宽 1080；与 explore/realtime/realestate 保持一致
+SCALE = 1080 / 390
+
+# 网格容器（对应官方 `flex grid grid-cols-4 px-12p py-10p gap-x-14p gap-y-12p`）
+PANEL_RADIUS = round(12 * SCALE)
+PANEL_PAD_X = round(12 * SCALE)
+GRID_COLS = 4
+GRID_GAP_X = round(14 * SCALE)
+GRID_GAP_Y = round(12 * SCALE)
+
+# 单元格：官方 `w-78.5p h-96p`
+CELL_W = round(78.5 * SCALE)
+CELL_H = round(96 * SCALE)
+CELL_DAY_FONT = round(12 * SCALE)
+CELL_NUM_FONT = round(10 * SCALE)
+CELL_NUM_RIGHT_PAD = round(4 * SCALE)
+CELL_BOTTOM_PAD = round(4 * SCALE)
+CELL_TEXT_GAP = round(2 * SCALE)
+CELL_ICON_SIZE = round(56 * SCALE)
+CELL_ICON_TOP = round(8 * SCALE)
+
+# sign_header.png 内分层（源 960×1350）；粉线占 168~177 共 9 行
+SIGN_HEADER_DARK_END = 168
+SIGN_HEADER_PINK_END = 177
+
+# sign_logo.png：NTE title 与面板之间居中
+SIGN_LOGO_W = round(220 * SCALE)
+SIGN_LOGO_BOTTOM_GAP = round(10 * SCALE)
+
+SUMMARY_HEIGHT = round(64 * SCALE)
+SUMMARY_LABEL_FONT = round(11 * SCALE)
+SUMMARY_VALUE_FONT = round(20 * SCALE)
+SUMMARY_VALUE_TOP = round(11 * SCALE)
+SUMMARY_VALUE_LABEL_GAP = round(4 * SCALE)
+SUMMARY_DIVIDER_INSET = round(14 * SCALE)
+
+GRID_TOP_GAP = round(10 * SCALE)
+DISCLAIMER_FONT = round(10 * SCALE)
+DISCLAIMER_TOP = round(16 * SCALE)
+DISCLAIMER_BOTTOM = round(14 * SCALE)
+PANEL_BOTTOM_PAD = round(16 * SCALE)
+
+COLOR_SUMMARY_LABEL = (170, 170, 175)
+COLOR_DIVIDER = (75, 75, 80)
+COLOR_NUM_DARK = (51, 51, 51)
+COLOR_DISCLAIMER = (112, 112, 112)
+
+TEXTURE_PATH = Path(__file__).parent / "texture2d" / "sign"
+
+
+def _load(name: str) -> Image.Image:
+    return Image.open(TEXTURE_PATH / name).convert("RGBA")
+
+
+CELL_ENABLE = _load("cell_enable.png").resize((CELL_W, CELL_H), Image.Resampling.LANCZOS)
+CELL_DISABLE = _load("cell_disable.png").resize((CELL_W, CELL_H), Image.Resampling.LANCZOS)
+CELL_DONE = _load("cell_done.png").resize((CELL_W, CELL_H), Image.Resampling.LANCZOS)
+
+_SIGN_HEADER_RAW = _load("sign_header.png")
+
+
+def _scaled(name: str, target_w: int) -> Image.Image:
+    raw = _load(name)
+    new_h = round(raw.height * target_w / raw.width)
+    return raw.resize((target_w, new_h), Image.Resampling.LANCZOS)
+
+
+def _sign_header_slice(width: int, top: int, bottom: int) -> Image.Image:
+    crop = _SIGN_HEADER_RAW.crop((0, top, _SIGN_HEADER_RAW.width, bottom))
+    new_h = round(crop.height * width / crop.width)
+    return crop.resize((width, new_h), Image.Resampling.LANCZOS)
+
+
+def _sign_header_body(width: int, height: int) -> Image.Image:
+    crop = _SIGN_HEADER_RAW.crop((0, SIGN_HEADER_PINK_END, _SIGN_HEADER_RAW.width, _SIGN_HEADER_RAW.height))
+    return crop.resize((width, height), Image.Resampling.LANCZOS)
+
+
+SIGN_LOGO = _scaled("sign_logo.png", SIGN_LOGO_W)
+summary_label_font = nte_font_origin(SUMMARY_LABEL_FONT)
+summary_value_font = nte_font_origin(SUMMARY_VALUE_FONT)
+day_font = nte_font_origin(CELL_DAY_FONT)
+num_font = nte_font_origin(CELL_NUM_FONT)
+disclaimer_font = nte_font_origin(DISCLAIMER_FONT)
+
+
+async def _load_reward_icon(url: str) -> Image.Image | None:
+    """缓存签到奖励图标；下载失败返回 None，由调用方占位。"""
+    if not url:
+        return None
+    try:
+        img = await download_pic_from_url(SIGN_CALENDAR_PATH, url, name=cache_name("reward", url))
+    except OSError:
+        return None
+    return img.convert("RGBA").resize((CELL_ICON_SIZE, CELL_ICON_SIZE), Image.Resampling.LANCZOS)
+
+
+def _classify(day_index: int, state: GameSignState) -> str:
+    """对齐官方 yh-signin webview：`signed = n < days`，`canSign = n == days && !todaySign`，其余 future。
+    `state.days` 是本月累计签到次数（不是月长），`state.day` 这里不参与逐格判定。"""
+    if day_index < state.days:
+        return "signed"
+    if day_index == state.days:
+        return "signed" if state.today_sign else "today"
+    return "future"
+
+
+def _draw_cell(
+    canvas: Image.Image,
+    draw: ImageDraw.ImageDraw,
+    xy: tuple[int, int],
+    day_index: int,
+    reward: GameSignReward,
+    icon: Image.Image | None,
+    kind: str,
+) -> None:
+    x, y = xy
+    bg = CELL_ENABLE if kind == "today" else CELL_DISABLE
+    canvas.alpha_composite(bg, (x, y))
+
+    if icon is not None:
+        canvas.alpha_composite(icon, (x + (CELL_W - CELL_ICON_SIZE) // 2, y + CELL_ICON_TOP))
+
+    cx = x + CELL_W // 2
+    day_y = y + CELL_H - CELL_BOTTOM_PAD - int(day_font.size)
+    draw.text((cx, day_y), f"第{day_index + 1}天", font=day_font, fill=COLOR_WHITE, anchor="mt")
+
+    num_y = day_y - CELL_TEXT_GAP - int(num_font.size)
+    draw.text(
+        (x + CELL_W - CELL_NUM_RIGHT_PAD, num_y),
+        f"x{reward.num}",
+        font=num_font,
+        fill=COLOR_NUM_DARK,
+        anchor="rt",
+    )
+
+    if kind == "signed":
+        canvas.alpha_composite(CELL_DONE, (x, y))
+
+
+def _draw_summary_row(
+    draw: ImageDraw.ImageDraw,
+    xy: tuple[int, int],
+    width: int,
+    state: GameSignState,
+) -> None:
+    """4 列统计：本月 / 累计签到 / 今日 / 可补签。直接画在烘焙暗带上，不重画底。"""
+    x, y = xy
+    items = [
+        (f"{state.month}月", "本月"),
+        (f"{state.days}天", "累计签到"),
+        ("已签" if state.today_sign else "未签", "今日"),
+        (str(state.re_sign_cnt), "可补签"),
+    ]
+    cell_w = width // len(items)
+    cy_value = y + SUMMARY_VALUE_TOP
+    cy_label = cy_value + int(summary_value_font.size) + SUMMARY_VALUE_LABEL_GAP
+    for idx, (value, label) in enumerate(items):
+        cx = x + cell_w * idx + cell_w // 2
+        draw.text((cx, cy_value), value, font=summary_value_font, fill=COLOR_WHITE, anchor="mt")
+        draw.text((cx, cy_label), label, font=summary_label_font, fill=COLOR_SUMMARY_LABEL, anchor="mt")
+        if idx < len(items) - 1:
+            sep_x = x + cell_w * (idx + 1)
+            draw.line(
+                [(sep_x, y + SUMMARY_DIVIDER_INSET), (sep_x, y + SUMMARY_HEIGHT - SUMMARY_DIVIDER_INSET)],
+                fill=COLOR_DIVIDER,
+                width=1,
+            )
+
+
+PANEL_W = GRID_COLS * CELL_W + (GRID_COLS - 1) * GRID_GAP_X + PANEL_PAD_X * 2
+PANEL_X = (WIDTH - PANEL_W) // 2
+
+
+async def draw_sign_calendar_img(
+    ev: Event,
+    state: GameSignState,
+    rewards: List[GameSignReward],
+    role_name: str,
+    game_id: str,
+):
+    rewards = list(rewards)
+    rows = (len(rewards) + GRID_COLS - 1) // GRID_COLS
+    grid_h = rows * CELL_H + max(0, rows - 1) * GRID_GAP_Y
+
+    user_avatar = await get_event_avatar(ev)
+    avatar_block = make_head_avatar(user_avatar, size=AVATAR_SIZE, avatar_size=AVATAR_INNER)
+
+    baked_dark = _sign_header_slice(PANEL_W, 0, SIGN_HEADER_DARK_END)
+    pink_strip = _sign_header_slice(PANEL_W, SIGN_HEADER_DARK_END, SIGN_HEADER_PINK_END)
+    baked_h = baked_dark.height
+    dark_total_h = baked_h + pink_strip.height
+
+    body_inner_h = (
+        GRID_TOP_GAP + grid_h + DISCLAIMER_TOP + int(disclaimer_font.size) + DISCLAIMER_BOTTOM + PANEL_BOTTOM_PAD
+    )
+    panel_h = dark_total_h + body_inner_h
+
+    body_top = AVATAR_Y + AVATAR_SIZE + BODY_TOP_GAP
+    panel_top = body_top + SIGN_LOGO.height + SIGN_LOGO_BOTTOM_GAP
+    total_height = panel_top + panel_h + FOOTER_RESERVE
+
+    game_label = GAME_LABELS[game_id]
+    canvas = get_nte_bg(WIDTH, total_height).convert("RGBA")
+    canvas.paste(get_nte_title_bg(WIDTH, HEADER_HEIGHT, game=GAME_BANNER_KEYS[game_id]), (0, 0))
+    canvas.alpha_composite(Image.new("RGBA", (WIDTH, HEADER_HEIGHT), COLOR_OVERLAY), (0, 0))
+
+    draw = ImageDraw.Draw(canvas)
+    title_right = WIDTH - PADDING
+    draw.text((title_right, 34), f"{game_label}·签到日历", font=nte_font_42, fill=COLOR_WHITE, anchor="ra")
+    draw.text((title_right, 96), role_name, font=nte_font_30, fill=COLOR_SUBTEXT, anchor="ra")
+    canvas.alpha_composite(avatar_block, (AVATAR_X, AVATAR_Y))
+    canvas.alpha_composite(SIGN_LOGO, ((WIDTH - SIGN_LOGO.width) // 2, body_top))
+
+    panel_layer = Image.new("RGBA", (PANEL_W, panel_h), (0, 0, 0, 0))
+    panel_layer.alpha_composite(baked_dark, (0, 0))
+    panel_layer.alpha_composite(pink_strip, (0, baked_h))
+    panel_layer.alpha_composite(_sign_header_body(PANEL_W, body_inner_h), (0, dark_total_h))
+    canvas.paste(panel_layer, (PANEL_X, panel_top), rounded_mask((PANEL_W, panel_h), PANEL_RADIUS))
+
+    inner_x = PANEL_X + PANEL_PAD_X
+    summary_y = panel_top + (baked_h - SUMMARY_HEIGHT) // 2
+    _draw_summary_row(draw, (inner_x, summary_y), PANEL_W - PANEL_PAD_X * 2, state)
+
+    grid_y = panel_top + dark_total_h + GRID_TOP_GAP
+    icons = [await _load_reward_icon(reward.icon) for reward in rewards]
+    for index, (reward, icon) in enumerate(zip(rewards, icons)):
+        x = inner_x + (index % GRID_COLS) * (CELL_W + GRID_GAP_X)
+        y = grid_y + (index // GRID_COLS) * (CELL_H + GRID_GAP_Y)
+        _draw_cell(canvas, draw, (x, y), index, reward, icon, _classify(index, state))
+
+    draw.text(
+        (PANEL_X + PANEL_W // 2, grid_y + grid_h + DISCLAIMER_TOP),
+        f"（签到奖励可能存在延迟，请前往《{game_label}》游戏内邮箱领取）",
+        font=disclaimer_font,
+        fill=COLOR_DISCLAIMER,
+        anchor="mt",
+    )
+
+    add_footer(canvas)
+    return await convert_img(canvas)
