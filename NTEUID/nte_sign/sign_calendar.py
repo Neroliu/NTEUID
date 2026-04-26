@@ -18,8 +18,8 @@ async def run_sign_calendar(bot: Bot, ev: Event, game_id: str) -> None:
         bot,
         ev,
         tag=TAG,
-        not_logged_in_msg=SignMsg.NOT_LOGGED_IN,
-        login_expired_msg=SignMsg.LOGIN_EXPIRED,
+        not_logged_in_msg=SignMsg.not_logged_in(),
+        login_expired_msg=SignMsg.login_expired(),
         game_id=game_id,
     )
     if session is None:
@@ -38,7 +38,7 @@ async def run_sign_calendar(bot: Bot, ev: Event, game_id: str) -> None:
             user,
             error,
             tag=TAG,
-            login_expired_msg=SignMsg.LOGIN_EXPIRED,
+            login_expired_msg=SignMsg.login_expired(),
             load_failed_msg=SignMsg.CALENDAR_LOAD_FAILED,
         )
 

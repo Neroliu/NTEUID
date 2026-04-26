@@ -14,7 +14,7 @@ from ..utils.game_registry import GAME_LABELS
 async def view_bindings(bot: Bot, ev: Event) -> None:
     rows = await NTEUser.list_sign_targets_by_user(ev.user_id, ev.bot_id)
     if not rows:
-        return await send_nte_notify(bot, ev, BindMsg.NOT_LOGGED_IN)
+        return await send_nte_notify(bot, ev, BindMsg.not_logged_in())
 
     grouped: Dict[str, List[NTEUser]] = {}
     for row in rows:
@@ -30,12 +30,12 @@ async def view_bindings(bot: Bot, ev: Event) -> None:
 async def switch_binding(bot: Bot, ev: Event, target: str) -> None:
     accounts = await NTEUser.list_latest_per_account(ev.user_id, ev.bot_id)
     if len(accounts) < 2:
-        msg = BindMsg.NOT_LOGGED_IN if not accounts else BindMsg.ONLY_ONE_ACCOUNT
+        msg = BindMsg.not_logged_in() if not accounts else BindMsg.ONLY_ONE_ACCOUNT
         return await send_nte_notify(bot, ev, msg)
 
     center_uid = _resolve_target(target, accounts)
     if center_uid is None:
-        return await send_nte_notify(bot, ev, BindMsg.TARGET_NOT_FOUND)
+        return await send_nte_notify(bot, ev, BindMsg.target_not_found())
 
     # 无参轮换：把旧 head 踩到最老，N 个账号才能循环 A→B→C→A。
     if not target:
@@ -52,7 +52,7 @@ async def switch_binding(bot: Bot, ev: Event, target: str) -> None:
 async def get_laohu_tokens(bot: Bot, ev: Event) -> None:
     accounts = await NTEUser.list_latest_per_account(ev.user_id, ev.bot_id)
     if not accounts:
-        return await send_nte_notify(bot, ev, BindMsg.NOT_LOGGED_IN)
+        return await send_nte_notify(bot, ev, BindMsg.not_logged_in())
 
     lines: List[str] = []
     for a in accounts:

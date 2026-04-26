@@ -56,7 +56,7 @@ async def sign_account(users: List[NTEUser]) -> str:
     except TajiduoError as error:
         await NTEUser.mark_invalid_by_cookie(primary.cookie, "refresh 失败")
         logger.warning(f"[NTE签到] 账号 {primary.center_uid} 刷新失败: {error.message}")
-        return f"{header}\n  · {SignMsg.LOGIN_EXPIRED}"
+        return f"{header}\n  · {SignMsg.login_expired()}"
 
     lines: List[str] = [header, f"  · {await _app_sign(client, primary.center_uid)}"]
     disabled_games = {

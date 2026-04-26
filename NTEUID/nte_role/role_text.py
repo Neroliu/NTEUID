@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ..nte_config.prefix import NTE_PREFIX
+from ..nte_config.prefix import nte_prefix
 from ..utils.sdk.tajiduo_model import CharQuality
 
 if TYPE_CHECKING:
@@ -20,5 +20,5 @@ def format_refresh_summary(characters: list["CharacterDetail"]) -> str:
         for q in sorted(buckets, key=lambda x: x.rank, reverse=True):
             names = "、".join(c.name for c in buckets[q] if c.name)
             lines.append(f"{q.label}（{len(buckets[q])}）：{names}")
-    lines.append(f"使用 `{NTE_PREFIX}<角色名>面板` 查看详情")
+    lines.append(f"使用 `{nte_prefix()}<角色名>面板` 查看详情")
     return "\n".join(lines)

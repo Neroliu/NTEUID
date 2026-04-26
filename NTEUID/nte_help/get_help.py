@@ -9,7 +9,7 @@ from gsuid_core.help.draw_new_plugin_help import get_new_help
 
 from ..version import NTEUID_version
 from ..utils.image import get_footer
-from ..nte_config.prefix import NTE_PREFIX
+from ..nte_config.prefix import nte_prefix
 
 ICON = Path(__file__).parent.parent.parent / "ICON.png"
 HELP_DATA = Path(__file__).parent / "help.json"
@@ -37,7 +37,7 @@ async def get_help(pm: int):
         plugin_info={f"v{NTEUID_version}": ""},
         plugin_icon=Image.open(ICON),
         plugin_help=plugin_help,
-        plugin_prefix=NTE_PREFIX,
+        plugin_prefix=nte_prefix(),
         help_mode="dark",
         banner_bg=_maybe("banner_bg.jpg"),
         banner_sub_text="一切正常，就是异常。",

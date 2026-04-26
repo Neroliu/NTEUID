@@ -32,7 +32,7 @@ from ..utils.image import (
     get_nte_title_bg,
     download_pic_from_url,
 )
-from ..nte_config.prefix import NTE_PREFIX
+from ..nte_config.prefix import nte_prefix
 from ..utils.fonts.nte_fonts import nte_font_22, nte_font_24, nte_font_26, nte_font_28, nte_font_38
 from ..utils.sdk.tajiduo_model import NoticePost
 from ..utils.resource.RESOURCE_PATH import NOTICE_PATH
@@ -202,7 +202,7 @@ async def draw_notice_list_img(columns: dict[str, list[tuple[str, str, str, str]
     draw_card(draw, (PADDING, footer_top, WIDTH - PADDING, footer_top + 84), radius=24)
     draw.text(
         (PADDING + 28, footer_top + 28),
-        f"发送 {NTE_PREFIX}公告 + postId 查看详情，例如：{NTE_PREFIX}公告 184039",
+        f"发送 {nte_prefix()}公告 + postId 查看详情，例如：{nte_prefix()}公告 184039",
         font=hint_font,
         fill=COLOR_TEXT,
     )

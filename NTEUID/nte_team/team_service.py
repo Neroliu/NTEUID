@@ -28,7 +28,7 @@ def _filter_recommendations(
 
 async def run_team(bot: Bot, ev: Event, char_name: str) -> None:
     if not char_name:
-        return await send_nte_notify(bot, ev, TeamMsg.USAGE_DETAIL)
+        return await send_nte_notify(bot, ev, TeamMsg.usage_detail())
 
     std_char_name = alias_to_char_name(char_name)
     if not std_char_name:

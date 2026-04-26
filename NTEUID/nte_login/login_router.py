@@ -52,7 +52,7 @@ class _LoginPayload(BaseModel):
 async def nte_login_page(auth_token: str):
     state: Optional[LoginState] = LOGIN_CACHE.get(auth_token)
     if not state:
-        return HTMLResponse(LoginMsg.LINK_EXPIRED, status_code=404)
+        return HTMLResponse(LoginMsg.link_expired(), status_code=404)
     if state.ok:
         return RedirectResponse("/nte/done", status_code=303)
     return HTMLResponse(

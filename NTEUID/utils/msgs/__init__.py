@@ -1,22 +1,22 @@
 from gsuid_core.bot import Bot
 from gsuid_core.models import Event
 
+from ...nte_config.prefix import nte_prefix
+
 TITLE = "[异环]\n"
 
 
 class CommonMsg:
-    from ...nte_config.prefix import NTE_PREFIX
-
     NOT_LOGGED_IN = "尚未登录塔吉多账号"
-    LOGIN_EXPIRED = f"登录已失效，请先发送【{NTE_PREFIX}刷新令牌】尝试续签，失败后再【{NTE_PREFIX}登录】"
     RETRY_LATER = "服务暂时不可用，请稍后再试"
+
+    @classmethod
+    def login_expired(cls) -> str:
+        p = nte_prefix()
+        return f"登录已失效，请先发送【{p}刷新令牌】尝试续签，失败后再【{p}登录】"
 
 
 class LoginMsg:
-    from ...nte_config.prefix import NTE_PREFIX
-
-    TIMEOUT = f"登录超时，请重新发送【{NTE_PREFIX}登录】"
-    SESSION_EXPIRED = f"登录会话已失效，请重新发送【{NTE_PREFIX}登录】"
     SMS_LOGIN_FAILED = "验证码错误或已过期，请重新获取"
     USER_CENTER_LOGIN_FAILED = "登录失败，请稍后再试"
     NO_SUPPORTED_GAME = "登录失败，请绑定插件支持的游戏"
@@ -25,7 +25,6 @@ class LoginMsg:
     LINK_COPY = "请复制地址到浏览器打开"
     LINK_QR = "请扫描下方二维码获取登录地址，并复制地址到浏览器打开\n"
     LINK_TTL = "登录地址10分钟内有效"
-    LINK_EXPIRED = f"链接已失效，请回到对话重新发送 {NTE_PREFIX}登录"
     MOBILE_INVALID = "手机号格式错误"
     CODE_INVALID = "验证码格式错误"
     SMS_SENT = "验证码已发送"
@@ -34,17 +33,25 @@ class LoginMsg:
     LOGOUT_DONE = "已退出登录，所有塔吉多账号已删除"
     REFRESH_NO_ACCOUNT = "你还没有登录塔吉多账号"
 
+    @classmethod
+    def timeout(cls) -> str:
+        return f"登录超时，请重新发送【{nte_prefix()}登录】"
+
+    @classmethod
+    def session_expired(cls) -> str:
+        return f"登录会话已失效，请重新发送【{nte_prefix()}登录】"
+
+    @classmethod
+    def link_expired(cls) -> str:
+        return f"链接已失效，请回到对话重新发送 {nte_prefix()}登录"
+
 
 class SignMsg:
-    from ...nte_config.prefix import NTE_PREFIX
-
-    NOT_LOGGED_IN = f"{CommonMsg.NOT_LOGGED_IN}，请先发送【{NTE_PREFIX}登录】"
     BATCH_BUSY = "已有批量签到任务在跑，请稍候再试"
     BATCH_SCHEDULE_BUSY = "已有批量签到任务在跑，本次定时跳过"
     NO_SIGN_ACCOUNT = "无可签账号"
     ACCOUNT_BUSY = "正在签到中，请稍候"
     FAILED = "签到失败，稍后再试"
-    LOGIN_EXPIRED = CommonMsg.LOGIN_EXPIRED
     NO_ROLE = "未绑定角色，跳过游戏签到"
     AUTO_NO_ACCOUNT = CommonMsg.NOT_LOGGED_IN
     AUTO_ENABLED = "已开启自动签到"
@@ -52,39 +59,61 @@ class SignMsg:
     CALENDAR_LOAD_FAILED = "签到日历加载失败，请稍后再试"
     CALENDAR_EMPTY = "暂无签到奖励数据"
 
+    @classmethod
+    def not_logged_in(cls) -> str:
+        return f"{CommonMsg.NOT_LOGGED_IN}，请先发送【{nte_prefix()}登录】"
+
+    @classmethod
+    def login_expired(cls) -> str:
+        return CommonMsg.login_expired()
+
 
 class RoleMsg:
-    from ...nte_config.prefix import NTE_PREFIX
-
-    NOT_LOGGED_IN = f"{CommonMsg.NOT_LOGGED_IN}，请先发送【{NTE_PREFIX}登录】"
-    LOGIN_EXPIRED = CommonMsg.LOGIN_EXPIRED
     LOAD_FAILED = "角色数据暂时无法获取，请稍后再试"
     LOCAL_EMPTY = "暂无本地角色详情数据"
     REFRESH_FAILED = "角色面板刷新失败，请稍后再试"
     REFRESH_DONE = "角色面板刷新完成"
     CHAR_NOT_FOUND = "未找到该角色（检查角色名）"
-    USAGE_DETAIL = f"用法：{NTE_PREFIX}<角色名>面板，例如 {NTE_PREFIX}娜娜莉面板"
     EMPTY = "暂无可展示的数据"
+
+    @classmethod
+    def not_logged_in(cls) -> str:
+        return f"{CommonMsg.NOT_LOGGED_IN}，请先发送【{nte_prefix()}登录】"
+
+    @classmethod
+    def login_expired(cls) -> str:
+        return CommonMsg.login_expired()
+
+    @classmethod
+    def usage_detail(cls) -> str:
+        p = nte_prefix()
+        return f"用法：{p}<角色名>面板，例如 {p}娜娜莉面板"
 
 
 class TeamMsg:
-    from ...nte_config.prefix import NTE_PREFIX
-
     LOAD_FAILED = "配队推荐暂时无法获取，请稍后再试"
     EMPTY = "当前没有可用的配队推荐"
     NO_RECOMMENDATION = "当前没有该角色的配队推荐"
     CHAR_NOT_FOUND = "未找到该角色（检查角色名）"
-    USAGE_DETAIL = f"用法：{NTE_PREFIX}<角色名>配队，例如 {NTE_PREFIX}娜娜莉配队"
+
+    @classmethod
+    def usage_detail(cls) -> str:
+        p = nte_prefix()
+        return f"用法：{p}<角色名>配队，例如 {p}娜娜莉配队"
 
 
 class BindMsg:
-    from ...nte_config.prefix import NTE_PREFIX
-
-    NOT_LOGGED_IN = f"{CommonMsg.NOT_LOGGED_IN}，请先发送【{NTE_PREFIX}登录】"
     ONLY_ONE_ACCOUNT = "当前仅绑定了 1 个塔吉多账号，无需切换"
-    TARGET_NOT_FOUND = f"未在已绑定账号中找到目标，可先发送【{NTE_PREFIX}查看】确认"
     SWITCH_DONE = "已切换到塔吉多账号 {center_uid}"
     TOKEN_EMPTY = "未找到可用的塔吉多凭证"
+
+    @classmethod
+    def not_logged_in(cls) -> str:
+        return f"{CommonMsg.NOT_LOGGED_IN}，请先发送【{nte_prefix()}登录】"
+
+    @classmethod
+    def target_not_found(cls) -> str:
+        return f"未在已绑定账号中找到目标，可先发送【{nte_prefix()}查看】确认"
 
 
 class GuideMsg:

@@ -6,7 +6,7 @@ from gsuid_core.models import Event
 from gsuid_core.help.utils import register_help
 
 from .get_help import ICON, get_help
-from ..nte_config.prefix import NTE_PREFIX
+from ..nte_config.prefix import nte_prefix
 
 sv_nte_help = SV("nte帮助")
 
@@ -16,4 +16,4 @@ async def send_nte_help(bot: Bot, ev: Event):
     await bot.send_option(await get_help(ev.user_pm))
 
 
-register_help("NTEUID", f"{NTE_PREFIX}帮助", Image.open(ICON))
+register_help("NTEUID", f"{nte_prefix()}帮助", Image.open(ICON))

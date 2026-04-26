@@ -23,8 +23,8 @@ def _open(tag: str):
     """各 service 共用的 open_session 默认参数。"""
     return {
         "tag": tag,
-        "not_logged_in_msg": RoleMsg.NOT_LOGGED_IN,
-        "login_expired_msg": RoleMsg.LOGIN_EXPIRED,
+        "not_logged_in_msg": RoleMsg.not_logged_in(),
+        "login_expired_msg": RoleMsg.login_expired(),
     }
 
 
@@ -43,7 +43,7 @@ async def run_role_home(bot: Bot, ev: Event) -> None:
             user,
             error,
             tag=tag,
-            login_expired_msg=RoleMsg.LOGIN_EXPIRED,
+            login_expired_msg=RoleMsg.login_expired(),
             load_failed_msg=RoleMsg.LOAD_FAILED,
         )
     cached = await load_role_characters_cache(user.uid)
@@ -53,7 +53,7 @@ async def run_role_home(bot: Bot, ev: Event) -> None:
 
 async def run_character_detail(bot: Bot, ev: Event, char_name: str) -> None:
     if not char_name:
-        return await send_nte_notify(bot, ev, RoleMsg.USAGE_DETAIL)
+        return await send_nte_notify(bot, ev, RoleMsg.usage_detail())
 
     std_char_name = alias_to_char_name(char_name)
     if not std_char_name:
@@ -64,7 +64,7 @@ async def run_character_detail(bot: Bot, ev: Event, char_name: str) -> None:
 
     user = await NTEUser.get_active(ev.user_id, ev.bot_id)
     if user is None:
-        return await send_nte_notify(bot, ev, RoleMsg.NOT_LOGGED_IN)
+        return await send_nte_notify(bot, ev, RoleMsg.not_logged_in())
 
     cached = await load_role_characters_cache(user.uid)
     if not cached:
@@ -93,7 +93,7 @@ async def run_refresh_role_panel(bot: Bot, ev: Event) -> None:
             user,
             error,
             tag=tag,
-            login_expired_msg=RoleMsg.LOGIN_EXPIRED,
+            login_expired_msg=RoleMsg.login_expired(),
             load_failed_msg=RoleMsg.REFRESH_FAILED,
         )
     parsed_characters = [CharacterDetail.model_validate(item) for item in raw_characters]
@@ -116,7 +116,7 @@ async def run_achievement(bot: Bot, ev: Event) -> None:
             user,
             error,
             tag=tag,
-            login_expired_msg=RoleMsg.LOGIN_EXPIRED,
+            login_expired_msg=RoleMsg.login_expired(),
             load_failed_msg=RoleMsg.LOAD_FAILED,
         )
     if not achievement.detail:
@@ -139,7 +139,7 @@ async def run_realestate(bot: Bot, ev: Event) -> None:
             user,
             error,
             tag=tag,
-            login_expired_msg=RoleMsg.LOGIN_EXPIRED,
+            login_expired_msg=RoleMsg.login_expired(),
             load_failed_msg=RoleMsg.LOAD_FAILED,
         )
     if not houses:
@@ -162,7 +162,7 @@ async def run_realtime(bot: Bot, ev: Event) -> None:
             user,
             error,
             tag=tag,
-            login_expired_msg=RoleMsg.LOGIN_EXPIRED,
+            login_expired_msg=RoleMsg.login_expired(),
             load_failed_msg=RoleMsg.LOAD_FAILED,
         )
     await bot.send(await draw_realtime_img(ev, home, user.role_name))
@@ -183,7 +183,7 @@ async def run_explore(bot: Bot, ev: Event) -> None:
             user,
             error,
             tag=tag,
-            login_expired_msg=RoleMsg.LOGIN_EXPIRED,
+            login_expired_msg=RoleMsg.login_expired(),
             load_failed_msg=RoleMsg.LOAD_FAILED,
         )
     if not areas:
@@ -206,7 +206,7 @@ async def run_vehicles(bot: Bot, ev: Event) -> None:
             user,
             error,
             tag=tag,
-            login_expired_msg=RoleMsg.LOGIN_EXPIRED,
+            login_expired_msg=RoleMsg.login_expired(),
             load_failed_msg=RoleMsg.LOAD_FAILED,
         )
     if not vehicles.detail:

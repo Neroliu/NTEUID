@@ -74,7 +74,7 @@ async def run_char_alias_action(
 
 async def run_char_alias_list(bot: Bot, ev: Event, char_name: str) -> None:
     if not char_name:
-        return await send_nte_notify(bot, ev, RoleMsg.USAGE_DETAIL)
+        return await send_nte_notify(bot, ev, RoleMsg.usage_detail())
 
     std_char_name = alias_to_char_name(char_name)
     if not std_char_name:

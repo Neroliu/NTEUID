@@ -90,7 +90,7 @@ async def request_login(bot: Bot, ev: Event) -> None:
 
     result = await _wait(auth_token)
     if result is None:
-        return await send_nte_notify(bot, ev, LoginMsg.TIMEOUT)
+        return await send_nte_notify(bot, ev, LoginMsg.timeout())
     await send_nte_notify(bot, ev, result.msg)
 
 
@@ -137,7 +137,7 @@ def _auth_token(user_id: str) -> str:
 async def send_login_sms(auth_token: str, mobile: str) -> LoginResult:
     state: Optional[LoginState] = LOGIN_CACHE.get(auth_token)
     if not state:
-        return LoginResult.fail(LoginMsg.SESSION_EXPIRED)
+        return LoginResult.fail(LoginMsg.session_expired())
     await LaohuClient(LAOHU_APP_ID, LAOHU_APP_KEY, device=state.device).send_sms_code(mobile)
     return LoginResult.success(msg=LoginMsg.SMS_SENT)
 
@@ -145,7 +145,7 @@ async def send_login_sms(auth_token: str, mobile: str) -> LoginResult:
 async def perform_login(auth_token: str, mobile: str, code: str) -> LoginResult:
     state: Optional[LoginState] = LOGIN_CACHE.get(auth_token)
     if not state:
-        return LoginResult.fail(LoginMsg.SESSION_EXPIRED)
+        return LoginResult.fail(LoginMsg.session_expired())
 
     laohu = LaohuClient(LAOHU_APP_ID, LAOHU_APP_KEY, device=state.device)
     account = await laohu.login_by_sms(mobile, code)

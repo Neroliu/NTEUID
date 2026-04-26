@@ -21,7 +21,7 @@ batch_lock = asyncio.Lock()
 async def run_user_sign(user_id: str, bot_id: str) -> str:
     users = await NTEUser.list_sign_targets_by_user(user_id, bot_id)
     if not users:
-        return SignMsg.NOT_LOGGED_IN
+        return SignMsg.not_logged_in()
     blocks = [await _sign_locked(g) for g in _group_by_center(users)]
     return "\n".join(blocks) if len(blocks) == 1 else "\n---\n".join(blocks)
 
