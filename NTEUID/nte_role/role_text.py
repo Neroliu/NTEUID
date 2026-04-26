@@ -60,21 +60,6 @@ def format_refresh_summary(characters: list["CharacterDetail"]) -> str:
     return "\n".join(lines)
 
 
-def format_character_detail(character: "CharacterDetail") -> str:
-    header_parts: list[str] = [character.name, character.quality.label, character.element_type.label]
-    lines = [" · ".join(header_parts)]
-    lines.append(f"进阶 Lv{character.alev} · 觉醒 {character.awaken_lev}")
-    if character.properties:
-        prop_parts = [f"{prop.name} {prop.value}" for prop in character.properties[:6] if prop.name]
-        if prop_parts:
-            lines.append(" · ".join(prop_parts))
-    all_skills = [*character.skills, *character.city_skills]
-    skill_parts = [f"{skill.name}Lv{skill.level}" for skill in all_skills if skill.name]
-    if skill_parts:
-        lines.append("技能: " + " · ".join(skill_parts))
-    return "\n".join(lines)
-
-
 def format_achievement(progress: "AchievementProgress") -> str:
     head_parts = [f"成就 {progress.achievement_cnt}/{progress.total}"]
     if progress.gold_umd_cnt:

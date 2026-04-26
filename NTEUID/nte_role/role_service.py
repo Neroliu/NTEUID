@@ -7,7 +7,6 @@ from .role_card import draw_role_card_img
 from .role_text import (
     format_achievement,
     format_refresh_summary,
-    format_character_detail,
 )
 from .role_cache import load_role_characters_cache, save_role_characters_cache
 from ..utils.msgs import RoleMsg, send_nte_notify
@@ -15,6 +14,7 @@ from .explore_card import draw_explore_img
 from .vehicle_card import draw_vehicle_img
 from .realtime_card import draw_realtime_img
 from ..utils.session import open_session, report_call_error
+from .character_card import draw_character_card_img
 from ..utils.database import NTEUser
 from .realestate_card import draw_realestate_img
 from ..utils.name_convert import alias_to_char_name, char_name_to_char_id
@@ -77,7 +77,7 @@ async def run_character_detail(bot: Bot, ev: Event, char_name: str) -> None:
     if target is None:
         return await send_nte_notify(bot, ev, RoleMsg.CHAR_NOT_FOUND)
 
-    await bot.send(format_character_detail(target))
+    await bot.send(await draw_character_card_img(ev, target, user.role_name))
 
 
 async def run_refresh_role_panel(bot: Bot, ev: Event) -> None:
