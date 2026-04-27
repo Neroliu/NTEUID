@@ -11,35 +11,20 @@ from gsuid_core.utils.image.image_tools import get_event_avatar
 
 from ..utils.image import (
     COLOR_WHITE,
-    COLOR_OVERLAY,
-    COLOR_SUBTEXT,
     add_footer,
     cache_name,
     get_nte_bg,
     rounded_mask,
-    get_nte_title_bg,
-    make_head_avatar,
+    make_nte_role_title,
     download_pic_from_url,
 )
-from ..utils.game_registry import GAME_LABELS, GAME_BANNER_KEYS
-from ..utils.fonts.nte_fonts import (
-    nte_font_30,
-    nte_font_42,
-    nte_font_origin,
-)
+from ..utils.game_registry import GAME_LABELS
+from ..utils.fonts.nte_fonts import nte_font_origin
 from ..utils.sdk.tajiduo_model import GameSignState, GameSignReward
 from ..utils.resource.RESOURCE_PATH import SIGN_CALENDAR_PATH
 
-WIDTH = 1080
-PADDING = 36
-HEADER_HEIGHT = 152
+WIDTH = 1180
 FOOTER_RESERVE = 80
-AVATAR_SIZE = 200
-AVATAR_INNER = 160
-AVATAR_OVERSHOOT_BELOW = 67
-AVATAR_X = PADDING
-AVATAR_Y = HEADER_HEIGHT - (AVATAR_SIZE - AVATAR_OVERSHOOT_BELOW)
-BODY_TOP_GAP = -56  # logo 上沿压入 title 区，与头像视觉对齐
 
 # 官方 webview design-width=390，渲染宽 1080；与 explore/realtime/realestate 保持一致
 SCALE = 1080 / 390
@@ -220,6 +205,7 @@ async def draw_sign_calendar_img(
     state: GameSignState,
     rewards: List[GameSignReward],
     role_name: str,
+    uid: str,
     game_id: str,
 ):
     rewards = list(rewards)
@@ -227,7 +213,7 @@ async def draw_sign_calendar_img(
     grid_h = rows * CELL_H + max(0, rows - 1) * GRID_GAP_Y
 
     user_avatar = await get_event_avatar(ev)
-    avatar_block = make_head_avatar(user_avatar, size=AVATAR_SIZE, avatar_size=AVATAR_INNER)
+    title = make_nte_role_title(user_avatar, role_name, uid)
 
     baked_dark = _sign_header_slice(PANEL_W, 0, SIGN_HEADER_DARK_END)
     pink_strip = _sign_header_slice(PANEL_W, SIGN_HEADER_DARK_END, SIGN_HEADER_PINK_END)
@@ -239,20 +225,15 @@ async def draw_sign_calendar_img(
     )
     panel_h = dark_total_h + body_inner_h
 
-    body_top = AVATAR_Y + AVATAR_SIZE + BODY_TOP_GAP
+    body_top = 30 + title.height
     panel_top = body_top + SIGN_LOGO.height + SIGN_LOGO_BOTTOM_GAP
     total_height = panel_top + panel_h + FOOTER_RESERVE
 
     game_label = GAME_LABELS[game_id]
     canvas = get_nte_bg(WIDTH, total_height).convert("RGBA")
-    canvas.paste(get_nte_title_bg(WIDTH, HEADER_HEIGHT, game=GAME_BANNER_KEYS[game_id]), (0, 0))
-    canvas.alpha_composite(Image.new("RGBA", (WIDTH, HEADER_HEIGHT), COLOR_OVERLAY), (0, 0))
+    canvas.alpha_composite(title, (40, 30))
 
     draw = ImageDraw.Draw(canvas)
-    title_right = WIDTH - PADDING
-    draw.text((title_right, 34), f"{game_label}·签到日历", font=nte_font_42, fill=COLOR_WHITE, anchor="ra")
-    draw.text((title_right, 96), role_name, font=nte_font_30, fill=COLOR_SUBTEXT, anchor="ra")
-    canvas.alpha_composite(avatar_block, (AVATAR_X, AVATAR_Y))
     canvas.alpha_composite(SIGN_LOGO, ((WIDTH - SIGN_LOGO.width) // 2, body_top))
 
     panel_layer = Image.new("RGBA", (PANEL_W, panel_h), (0, 0, 0, 0))

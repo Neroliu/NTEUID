@@ -45,4 +45,4 @@ async def run_sign_calendar(bot: Bot, ev: Event, game_id: str) -> None:
     if not rewards:
         return await send_nte_notify(bot, ev, SignMsg.CALENDAR_EMPTY)
 
-    await bot.send(await draw_sign_calendar_img(ev, state, rewards, user.role_name, game_id))
+    await bot.send(await draw_sign_calendar_img(ev, state, rewards, user.role_name, user.uid, game_id))

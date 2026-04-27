@@ -79,7 +79,7 @@ async def draw_refresh_img(
         char_badge = badge.copy()
         ImageDraw.Draw(char_badge).text(
             (45, 23),
-            f"{char.awaken_lev}阶",
+            f"{char.awaken_lev}觉",
             font=nte_font_24,
             fill=COLOR_WHITE,
             anchor="mm",

@@ -10,33 +10,17 @@ from gsuid_core.utils.image.convert import convert_img
 from gsuid_core.utils.image.image_tools import get_event_avatar
 
 from ..utils.image import (
-    COLOR_WHITE,
-    COLOR_OVERLAY,
-    COLOR_SUBTEXT,
     add_footer,
     get_nte_bg,
     rounded_mask,
-    get_nte_title_bg,
-    make_head_avatar,
+    make_nte_role_title,
 )
 from ..utils.resource.cdn import get_area_type_img, get_area_wide_img
-from ..utils.fonts.nte_fonts import (
-    nte_font_30,
-    nte_font_42,
-    nte_font_origin,
-)
+from ..utils.fonts.nte_fonts import nte_font_origin
 from ..utils.sdk.tajiduo_model import AreaProgress, AreaDetailItem
 
 WIDTH = 1080
-PADDING = 36
-HEADER_HEIGHT = 152
 FOOTER_RESERVE = 80
-AVATAR_SIZE = 200
-AVATAR_INNER = 160
-AVATAR_OVERSHOOT_BELOW = 67  # 头像 2/3 在 title 内、1/3 探入 body
-AVATAR_X = PADDING
-AVATAR_Y = HEADER_HEIGHT - (AVATAR_SIZE - AVATAR_OVERSHOOT_BELOW)
-BODY_TOP_GAP = 32
 
 TEXTURE_PATH = Path(__file__).parent / "texture2d" / "explore"
 
@@ -322,25 +306,19 @@ async def _prepare(area: AreaProgress) -> PreparedArea:
     return PreparedArea(area=area, banner=banner, rows=rows, banner_h=_banner_total_height(banner.height))
 
 
-async def draw_explore_img(ev: Event, areas: list[AreaProgress], role_name: str):
+async def draw_explore_img(ev: Event, areas: list[AreaProgress], role_name: str, uid: str):
     prepared = [await _prepare(a) for a in areas]
     user_avatar = await get_event_avatar(ev)
-    avatar_block = make_head_avatar(user_avatar, size=AVATAR_SIZE, avatar_size=AVATAR_INNER)
 
     body_h = sum(_card_height(len(p.rows), p.banner_h) for p in prepared) + max(0, len(prepared) - 1) * CARD_GAP
-    body_top = AVATAR_Y + AVATAR_SIZE + BODY_TOP_GAP
+    body_top = 258
     total_height = body_top + body_h + FOOTER_RESERVE
 
     canvas = get_nte_bg(WIDTH, total_height).convert("RGBA")
-    canvas.paste(get_nte_title_bg(WIDTH, HEADER_HEIGHT), (0, 0))
-    canvas.alpha_composite(Image.new("RGBA", (WIDTH, HEADER_HEIGHT), COLOR_OVERLAY), (0, 0))
+    title = make_nte_role_title(user_avatar, role_name, uid).resize((1024, 201), Image.Resampling.LANCZOS)
+    canvas.alpha_composite(title, (36, 30))
 
     draw = ImageDraw.Draw(canvas)
-    title_right = WIDTH - PADDING
-    draw.text((title_right, 34), "异环·探索详情", font=nte_font_42, fill=COLOR_WHITE, anchor="ra")
-    draw.text((title_right, 96), role_name, font=nte_font_30, fill=COLOR_SUBTEXT, anchor="ra")
-
-    canvas.alpha_composite(avatar_block, (AVATAR_X, AVATAR_Y))
 
     y = body_top
     for index, item in enumerate(prepared):

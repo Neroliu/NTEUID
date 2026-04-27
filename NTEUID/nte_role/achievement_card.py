@@ -9,29 +9,18 @@ from gsuid_core.utils.image.convert import convert_img
 from gsuid_core.utils.image.image_tools import get_event_avatar
 
 from ..utils.image import (
-    COLOR_WHITE,
-    COLOR_OVERLAY,
-    COLOR_SUBTEXT,
     add_footer,
     get_nte_bg,
     rounded_mask,
-    get_nte_title_bg,
-    make_head_avatar,
+    make_nte_role_title,
 )
 from ..utils.resource.cdn import get_achievement_img
-from ..utils.fonts.nte_fonts import nte_font_30, nte_font_42, nte_font_origin
+from ..utils.fonts.nte_fonts import nte_font_origin
 from ..utils.sdk.tajiduo_model import AchievementCategory, AchievementProgress
 
 WIDTH = 1080
 PADDING = 36
-HEADER_HEIGHT = 152
 FOOTER_RESERVE = 80
-AVATAR_SIZE = 200
-AVATAR_INNER = 160
-AVATAR_OVERSHOOT_BELOW = 67
-AVATAR_X = PADDING
-AVATAR_Y = HEADER_HEIGHT - (AVATAR_SIZE - AVATAR_OVERSHOOT_BELOW)
-BODY_TOP_GAP = 32
 
 SCALE = 1080 / 390
 
@@ -209,9 +198,8 @@ async def _draw_item(
     return bg_h
 
 
-async def draw_achievement_img(ev: Event, progress: AchievementProgress, role_name: str):
+async def draw_achievement_img(ev: Event, progress: AchievementProgress, role_name: str, uid: str):
     user_avatar = await get_event_avatar(ev)
-    avatar_block = make_head_avatar(user_avatar, size=AVATAR_SIZE, avatar_size=AVATAR_INNER)
 
     inner_w = WIDTH - PADDING * 2 - OUTER_PAD_X * 2
     items = progress.detail or []
@@ -223,18 +211,14 @@ async def draw_achievement_img(ev: Event, progress: AchievementProgress, role_na
     body_h = header_bg_h + (ITEM_GAP + items_h if items else 0)
     outer_h = body_h + OUTER_PAD_Y * 2
 
-    body_top = AVATAR_Y + AVATAR_SIZE + BODY_TOP_GAP
+    body_top = 258
     total_h = body_top + outer_h + FOOTER_RESERVE
 
     canvas = get_nte_bg(WIDTH, total_h).convert("RGBA")
-    canvas.paste(get_nte_title_bg(WIDTH, HEADER_HEIGHT), (0, 0))
-    canvas.alpha_composite(Image.new("RGBA", (WIDTH, HEADER_HEIGHT), COLOR_OVERLAY), (0, 0))
+    title = make_nte_role_title(user_avatar, role_name, uid).resize((1024, 201), Image.Resampling.LANCZOS)
+    canvas.alpha_composite(title, (PADDING, 30))
 
     draw = ImageDraw.Draw(canvas)
-    title_right = WIDTH - PADDING
-    draw.text((title_right, 34), "异环·成就进度", font=nte_font_42, fill=COLOR_WHITE, anchor="ra")
-    draw.text((title_right, 96), role_name, font=nte_font_30, fill=COLOR_SUBTEXT, anchor="ra")
-    canvas.alpha_composite(avatar_block, (AVATAR_X, AVATAR_Y))
 
     outer_x = PADDING
     outer_w = WIDTH - PADDING * 2

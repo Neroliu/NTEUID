@@ -74,7 +74,7 @@ async def run_character_detail(bot: Bot, ev: Event, char_name: str) -> None:
     if target is None:
         return await send_nte_notify(bot, ev, RoleMsg.CHAR_NOT_FOUND)
 
-    await bot.send(await draw_character_card_img(ev, target, user.role_name))
+    await bot.send(await draw_character_card_img(ev, target, user.role_name, user.uid))
 
 
 async def run_refresh_role_panel(bot: Bot, ev: Event) -> None:
@@ -124,7 +124,7 @@ async def run_achievement(bot: Bot, ev: Event) -> None:
         )
     if not achievement.detail:
         return await send_nte_notify(bot, ev, RoleMsg.EMPTY)
-    await bot.send(await draw_achievement_img(ev, achievement, user.role_name))
+    await bot.send(await draw_achievement_img(ev, achievement, user.role_name, user.uid))
 
 
 async def run_realestate(bot: Bot, ev: Event) -> None:
@@ -147,7 +147,7 @@ async def run_realestate(bot: Bot, ev: Event) -> None:
         )
     if not houses:
         return await send_nte_notify(bot, ev, RoleMsg.EMPTY)
-    await bot.send(await draw_realestate_img(ev, houses, user.role_name))
+    await bot.send(await draw_realestate_img(ev, houses, user.role_name, user.uid))
 
 
 async def run_realtime(bot: Bot, ev: Event) -> None:
@@ -191,7 +191,7 @@ async def run_explore(bot: Bot, ev: Event) -> None:
         )
     if not areas:
         return await send_nte_notify(bot, ev, RoleMsg.EMPTY)
-    await bot.send(await draw_explore_img(ev, areas, user.role_name))
+    await bot.send(await draw_explore_img(ev, areas, user.role_name, user.uid))
 
 
 async def run_vehicles(bot: Bot, ev: Event) -> None:
@@ -214,4 +214,4 @@ async def run_vehicles(bot: Bot, ev: Event) -> None:
         )
     if not vehicles.detail:
         return await send_nte_notify(bot, ev, RoleMsg.EMPTY)
-    await bot.send(await draw_vehicle_img(ev, vehicles, user.role_name))
+    await bot.send(await draw_vehicle_img(ev, vehicles, user.role_name, user.uid))
