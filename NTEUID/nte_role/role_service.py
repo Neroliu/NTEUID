@@ -168,7 +168,7 @@ async def run_realtime(bot: Bot, ev: Event) -> None:
             login_expired_msg=RoleMsg.login_expired(),
             load_failed_msg=RoleMsg.LOAD_FAILED,
         )
-    await bot.send(await draw_realtime_img(ev, home, user.role_name))
+    await bot.send(await draw_realtime_img(ev, user, home))
 
 
 async def run_explore(bot: Bot, ev: Event) -> None:

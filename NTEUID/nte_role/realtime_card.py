@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import random
 from pathlib import Path
 
 from PIL import Image, ImageDraw
@@ -10,232 +11,124 @@ from gsuid_core.utils.image.image_tools import get_event_avatar
 
 from ..utils.image import (
     COLOR_WHITE,
-    COLOR_OVERLAY,
-    COLOR_SUBTEXT,
     add_footer,
-    get_nte_bg,
-    get_nte_title_bg,
-    make_head_avatar,
+    make_nte_role_title,
 )
-from ..utils.fonts.nte_fonts import (
-    nte_font_30,
-    nte_font_42,
-    nte_font_origin,
-)
+from ..utils.database import SIGN_KIND_APP, SIGN_KIND_GAME, NTEUser, NTESignRecord
+from ..utils.fonts.nte_fonts import nte_font_origin
 from ..utils.sdk.tajiduo_model import RoleHome
 
-WIDTH = 1080
-PADDING = 36
-HEADER_HEIGHT = 152
-FOOTER_RESERVE = 80
-AVATAR_SIZE = 200
-AVATAR_INNER = 160
-AVATAR_OVERSHOOT_BELOW = 67
-AVATAR_X = PADDING
-AVATAR_Y = HEADER_HEIGHT - (AVATAR_SIZE - AVATAR_OVERSHOOT_BELOW)
-BODY_TOP_GAP = 32
-
 TEXTURE_PATH = Path(__file__).parent / "texture2d" / "realtime"
+FASHION_DIR = TEXTURE_PATH / "fashion"
 
-SCALE = 1080 / 390
-PAGE_PAD_X = round(15 * SCALE)
-CONTENT_WIDTH = WIDTH - PAGE_PAD_X * 2
-
-SEC_ICON_SIZE = round(18 * SCALE)
-SEC_TITLE_FONT_SIZE = round(18 * SCALE)
-SEC_SUB_FONT_SIZE = max(10, round(4 * SCALE))
-SEC_TITLE_GAP = round(2 * SCALE)
-SEC_BLOCK_HEIGHT_GAP = round(15 * SCALE)
-
-STAT_ICON_SIZE = round(44 * SCALE)
-STAT_NUM_FONT = round(13 * SCALE)
-STAT_NAME_FONT = round(10 * SCALE)
-STAT_INNER_GAP = round(2 * SCALE)
-TOP_ROW_OVERLAY_Y = round(29 * SCALE)
-ROW_GAP = round(33 * SCALE)
-SIDE_INSET = round(16 * SCALE)
-BAR_LABEL_FONT = round(13 * SCALE)
-BAR_VALUE_FONT = round(17 * SCALE)
-BAR_GAP = round(5 * SCALE)
-SEPARATOR_HEIGHT = round(14 * SCALE)
-
-COLOR_SECTION_TITLE = (240, 240, 245)
-COLOR_SUBTITLE_GRAY = (177, 177, 177)
-COLOR_STAT_NUM = (65, 65, 65)
-COLOR_STAT_NAME = (122, 122, 122)
-COLOR_BAR_LABEL = COLOR_WHITE
-COLOR_BAR_VALUE = COLOR_WHITE
-COLOR_DAY_VALUE = (235, 104, 119)
-COLOR_SEPARATOR = (239, 239, 239)
-
-SUBTITLE_TEXT = "REAL - TIME INFOMATION"
-
-sec_title_font = nte_font_origin(SEC_TITLE_FONT_SIZE)
-sec_sub_font = nte_font_origin(SEC_SUB_FONT_SIZE)
-stat_num_font = nte_font_origin(STAT_NUM_FONT)
-stat_name_font = nte_font_origin(STAT_NAME_FONT)
-bar_label_font = nte_font_origin(BAR_LABEL_FONT)
-bar_value_font = nte_font_origin(BAR_VALUE_FONT)
+COLOR_VAL_RED = (235, 80, 100)
+COLOR_LABEL = (210, 210, 220)
+COLOR_SUB_GRAY = (170, 170, 180)
 
 
 def _load_icon(name: str, size: int) -> Image.Image:
     return Image.open(TEXTURE_PATH / name).convert("RGBA").resize((size, size), Image.Resampling.LANCZOS)
 
 
-SEC_ICON = _load_icon("sec_icon.png", SEC_ICON_SIZE)
-STAMINA_ICON = _load_icon("stamina.png", STAT_ICON_SIZE)
-CITYSTAMINA_ICON = _load_icon("citystamina.png", STAT_ICON_SIZE)
-
-_BG_RAW = Image.open(TEXTURE_PATH / "bg.png").convert("RGBA")
-BG_IMG_W = CONTENT_WIDTH
-BG_IMG_H = round(BG_IMG_W * _BG_RAW.height / _BG_RAW.width)
-BG_IMG = _BG_RAW.resize((BG_IMG_W, BG_IMG_H), Image.Resampling.LANCZOS)
-
-SECTION_HEADER_HEIGHT = max(
-    SEC_ICON_SIZE,
-    int(sec_title_font.size) + SEC_TITLE_GAP + int(sec_sub_font.size),
-)
-
-
-def _city_stamina_max(tycoon_level: int) -> int:
-    """官方根据大亨等级推都市活力上限：>=23→700, >=16→500, >=10→350, >=5→200, 否则 100。"""
-    for threshold, limit in ((23, 700), (16, 500), (10, 350), (5, 200)):
-        if tycoon_level >= threshold:
-            return limit
-    return 100
+def _fit_centered(img: Image.Image, output_size: tuple[int, int]) -> Image.Image:
+    """长边缩到 frame 对应边、短边居中、出血居中裁，输出永远是 output_size 的透明 RGBA。"""
+    iw, ih = img.size
+    tw, th = output_size
+    if iw > ih:
+        scale = tw / iw
+        new_size = (tw, round(ih * scale))
+    else:
+        scale = th / ih
+        new_size = (round(iw * scale), th)
+    resized = img.resize(new_size, Image.Resampling.LANCZOS)
+    out = Image.new("RGBA", output_size, (0, 0, 0, 0))
+    out.paste(resized, ((tw - new_size[0]) // 2, (th - new_size[1]) // 2), resized)
+    return out
 
 
-def _draw_section_header(canvas: Image.Image, draw: ImageDraw.ImageDraw, xy: tuple[int, int]) -> None:
-    x, y = xy
-    canvas.alpha_composite(SEC_ICON, (x, y))
-    text_x = x + SEC_ICON_SIZE + round(2 * SCALE)
-    draw.text((text_x, y), "实时信息", font=sec_title_font, fill=COLOR_SECTION_TITLE, anchor="lt")
-    title_bottom = draw.textbbox((text_x, y), "实时信息", font=sec_title_font, anchor="lt")[3]
-    draw.text(
-        (text_x, title_bottom + SEC_TITLE_GAP),
-        SUBTITLE_TEXT,
-        font=sec_sub_font,
-        fill=COLOR_SUBTITLE_GRAY,
-        anchor="lt",
-    )
-
-
-def _draw_stat_block(
+def _draw_stat_cell(
     canvas: Image.Image,
     draw: ImageDraw.ImageDraw,
     icon: Image.Image,
-    name: str,
-    num: str,
-    xy: tuple[int, int],
-) -> None:
-    """[icon] [num/name] 横向块，按官方 Fp 组件对齐：icon 左、文本右。"""
-    x, y = xy
-    icon_y = y
-    canvas.alpha_composite(icon, (x, icon_y))
-    text_x = x + STAT_ICON_SIZE + STAT_INNER_GAP
-    cy = icon_y + STAT_ICON_SIZE // 2
-    draw.text((text_x, cy - round(2 * SCALE)), num, font=stat_num_font, fill=COLOR_STAT_NUM, anchor="lb")
-    draw.text((text_x, cy + round(2 * SCALE)), name, font=stat_name_font, fill=COLOR_STAT_NAME, anchor="lt")
-
-
-def _draw_bottom_cell(
-    draw: ImageDraw.ImageDraw,
     label: str,
     value: str,
-    cx: int,
-    cy: int,
-    *,
-    value_color: tuple[int, int, int] = COLOR_BAR_VALUE,
-    after_value: str = "",
+    maximum: str,
+    xy: tuple[int, int],
 ) -> None:
-    """`label: value` 横向，cx 为该单元水平中心。"""
-    label_w = draw.textlength(label, font=bar_label_font)
-    value_w = draw.textlength(value, font=bar_value_font)
-    after_w = draw.textlength(after_value, font=bar_value_font) if after_value else 0
-    gap = BAR_GAP
-    total = label_w + gap + value_w + after_w
-    start_x = cx - total // 2
-    draw.text((start_x, cy), label, font=bar_label_font, fill=COLOR_BAR_LABEL, anchor="lm")
-    val_x = start_x + label_w + gap
-    draw.text((val_x, cy), value, font=bar_value_font, fill=value_color, anchor="lm")
-    if after_value:
-        draw.text((val_x + value_w, cy), after_value, font=bar_value_font, fill=COLOR_BAR_VALUE, anchor="lm")
+    cx, cy = xy
+    canvas.alpha_composite(icon, (cx + 16, cy + 3))
+
+    text_x = cx + 166
+    mid_y = cy + 67
+    font_value = nte_font_origin(58)
+    font_max = nte_font_origin(40)
+    font_label = nte_font_origin(24)
+
+    draw.text((text_x, mid_y - 4), value, font=font_value, fill=COLOR_VAL_RED, anchor="lb")
+    val_w = draw.textlength(value, font=font_value)
+    draw.text(
+        (text_x + val_w + 4, mid_y - 4),
+        f"/{maximum}",
+        font=font_max,
+        fill=COLOR_WHITE,
+        anchor="lb",
+    )
+    draw.text((text_x, mid_y + 14), label, font=font_label, fill=COLOR_LABEL, anchor="lt")
 
 
-async def draw_realtime_img(ev: Event, home: RoleHome, role_name: str):
+async def draw_realtime_img(ev: Event, user: NTEUser, home: RoleHome):
     user_avatar = await get_event_avatar(ev)
-    avatar_block = make_head_avatar(user_avatar, size=AVATAR_SIZE, avatar_size=AVATAR_INNER)
 
-    body_top = AVATAR_Y + AVATAR_SIZE + BODY_TOP_GAP
-    card_h = SECTION_HEADER_HEIGHT + SEC_BLOCK_HEIGHT_GAP + BG_IMG_H
-    total_height = body_top + card_h + FOOTER_RESERVE
+    canvas = Image.new("RGBA", (1786, 1000), (0, 0, 0, 0))
+    canvas.alpha_composite(Image.open(TEXTURE_PATH / "bg.jpg").convert("RGBA"), (0, 0))
 
-    canvas = get_nte_bg(WIDTH, total_height).convert("RGBA")
-    canvas.paste(get_nte_title_bg(WIDTH, HEADER_HEIGHT), (0, 0))
-    canvas.alpha_composite(Image.new("RGBA", (WIDTH, HEADER_HEIGHT), COLOR_OVERLAY), (0, 0))
+    fashion_pool = [p for p in FASHION_DIR.iterdir() if p.is_file() and not p.name.startswith(".")]
+    fashion_raw = Image.open(random.choice(fashion_pool)).convert("RGBA")
+    canvas.alpha_composite(_fit_centered(fashion_raw, (800, 1000)), (-40, 0))
+    canvas.alpha_composite(Image.open(TEXTURE_PATH / "fg.png").convert("RGBA"), (0, 0))
+
+    canvas.alpha_composite(make_nte_role_title(user_avatar, user.role_name, user.uid, home.lev), (676, 180))
+
+    badges = []
+    if await NTESignRecord.is_signed(f"{user.game_id}:{user.uid}", SIGN_KIND_GAME):
+        badges.append("今日异环已签到")
+    if await NTESignRecord.is_signed(user.center_uid, SIGN_KIND_APP):
+        badges.append("今日塔吉多已签到")
+    for i, text in enumerate(badges):
+        badge = Image.open(TEXTURE_PATH / "title2.png").convert("RGBA").crop((0, 0, 320, 45))
+        ImageDraw.Draw(badge).text((60, 22), text, font=nte_font_origin(24), fill=(235, 240, 245), anchor="lm")
+        canvas.alpha_composite(badge, (1166 + i * 280, 408))
 
     draw = ImageDraw.Draw(canvas)
-    title_right = WIDTH - PADDING
-    draw.text((title_right, 34), "异环·实时信息", font=nte_font_42, fill=COLOR_WHITE, anchor="ra")
-    draw.text((title_right, 96), role_name, font=nte_font_30, fill=COLOR_SUBTEXT, anchor="ra")
-    canvas.alpha_composite(avatar_block, (AVATAR_X, AVATAR_Y))
-
-    _draw_section_header(canvas, draw, (PAGE_PAD_X, body_top))
-
-    bg_y = body_top + SECTION_HEADER_HEIGHT + SEC_BLOCK_HEIGHT_GAP
-    canvas.alpha_composite(BG_IMG, (PAGE_PAD_X, bg_y))
-
-    # 上半行：本性像素 + 都市活力（白底区）
-    stamina_max = home.stamina_max_value or 240
-    citystamina_max = home.city_stamina_max_value or _city_stamina_max(home.tycoon_level)
-    overlay_top_y = bg_y + TOP_ROW_OVERLAY_Y
-    inner_left = PAGE_PAD_X + SIDE_INSET
-    inner_right = PAGE_PAD_X + BG_IMG_W - SIDE_INSET
-    inner_w = inner_right - inner_left
-    half_w = inner_w // 2
-
-    _draw_stat_block(
-        canvas,
-        draw,
-        STAMINA_ICON,
-        "本性像素",
-        f"{home.stamina_value}/{stamina_max}",
-        (inner_left + (half_w - STAT_ICON_SIZE - round(80 * SCALE) // 2) // 2, overlay_top_y),
-    )
-    _draw_stat_block(
-        canvas,
-        draw,
-        CITYSTAMINA_ICON,
-        "都市活力",
-        f"{home.city_stamina_value}/{citystamina_max}",
-        (inner_left + half_w + (half_w - STAT_ICON_SIZE - round(80 * SCALE) // 2) // 2, overlay_top_y),
+    canvas.alpha_composite(_load_icon("sec_icon.png", 54), (716, 466))
+    draw.text((780, 462), "实时信息", font=nte_font_origin(42), fill=COLOR_WHITE, anchor="lt")
+    draw.text(
+        (780, 512),
+        "REAL - TIME INFOMATION",
+        font=nte_font_origin(20),
+        fill=COLOR_SUB_GRAY,
+        anchor="lt",
     )
 
-    # 下半行：活跃度 + | + 周本次数；cy 落在 bg 暗带视觉中心（暗带在 bg 0.63~0.89 区间）
-    third = inner_w // 3
-    cy = bg_y + round(BG_IMG_H * 0.76)
-    sep_x = inner_left + inner_w // 2
-    draw.line(
-        [(sep_x, cy - SEPARATOR_HEIGHT // 2), (sep_x, cy + SEPARATOR_HEIGHT // 2)],
-        fill=COLOR_SEPARATOR,
-        width=2,
+    canvas.alpha_composite(Image.open(TEXTURE_PATH / "bg1.png").convert("RGBA"), (696, 568))
+
+    cards = (
+        ("stamina.png", "本性像素", str(home.stamina_value), str(home.stamina_max_value)),
+        ("citystamina.png", "都市活力", str(home.city_stamina_value), str(home.city_stamina_max_value)),
+        ("activity.png", "活跃度", str(home.day_value), "100"),
+        ("weekcopies.png", "周本次数", str(home.week_copies_remain_cnt), "3"),
     )
-    _draw_bottom_cell(
-        draw,
-        "活跃度:",
-        str(home.day_value),
-        inner_left + third // 2 + round(40 * SCALE),
-        cy,
-        value_color=COLOR_DAY_VALUE,
-        after_value="/100",
-    )
-    _draw_bottom_cell(
-        draw,
-        "周本次数:",
-        f"{home.week_copies_remain_cnt}/3",
-        inner_left + inner_w - third // 2 - round(40 * SCALE),
-        cy,
-    )
+    for i, (icon_name, label, val, mx) in enumerate(cards):
+        row, col = divmod(i, 2)
+        _draw_stat_cell(
+            canvas,
+            draw,
+            _load_icon(icon_name, 128),
+            label,
+            val,
+            mx,
+            (736 + col * 500, 598 + row * 143),
+        )
 
     add_footer(canvas)
     return await convert_img(canvas)
