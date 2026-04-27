@@ -4,10 +4,11 @@ from gsuid_core.bot import Bot
 from gsuid_core.models import Event
 
 from .role_card import draw_role_card_img
-from .role_text import format_refresh_summary
+from .role_sort import diff_characters, sort_characters
 from .role_cache import load_role_characters_cache, save_role_characters_cache
 from ..utils.msgs import RoleMsg, send_nte_notify
 from .explore_card import draw_explore_img
+from .refresh_card import draw_refresh_img
 from .vehicle_card import draw_vehicle_img
 from .realtime_card import draw_realtime_img
 from ..utils.session import open_session, report_call_error
@@ -46,8 +47,7 @@ async def run_role_home(bot: Bot, ev: Event) -> None:
             login_expired_msg=RoleMsg.login_expired(),
             load_failed_msg=RoleMsg.LOAD_FAILED,
         )
-    cached = await load_role_characters_cache(user.uid)
-    characters = [CharacterDetail.model_validate(item) for item in cached] if cached else []
+    characters = await load_role_characters_cache(user.uid)
     await bot.send(await draw_role_card_img(ev, home, characters, user.role_name))
 
 
@@ -66,10 +66,9 @@ async def run_character_detail(bot: Bot, ev: Event, char_name: str) -> None:
     if user is None:
         return await send_nte_notify(bot, ev, RoleMsg.not_logged_in())
 
-    cached = await load_role_characters_cache(user.uid)
-    if not cached:
+    characters = await load_role_characters_cache(user.uid)
+    if not characters:
         return await send_nte_notify(bot, ev, RoleMsg.LOCAL_EMPTY)
-    characters = [CharacterDetail.model_validate(item) for item in cached]
 
     target = next((character for character in characters if character.id == char_id), None)
     if target is None:
@@ -85,6 +84,7 @@ async def run_refresh_role_panel(bot: Bot, ev: Event) -> None:
         return
     user, client = session
     try:
+        home = await client.get_role_home(user.uid)
         raw_characters = await client.get_role_characters_data(user.uid)
     except TajiduoError as error:
         return await report_call_error(
@@ -97,8 +97,11 @@ async def run_refresh_role_panel(bot: Bot, ev: Event) -> None:
             load_failed_msg=RoleMsg.REFRESH_FAILED,
         )
     parsed_characters = [CharacterDetail.model_validate(item) for item in raw_characters]
+    old_characters = await load_role_characters_cache(user.uid)
+    changed_ids = diff_characters(parsed_characters, old_characters)
     await save_role_characters_cache(user.uid, raw_characters)
-    await bot.send(format_refresh_summary(parsed_characters))
+    sorted_characters = sort_characters(parsed_characters, changed_ids=changed_ids)
+    await bot.send(await draw_refresh_img(ev, user.role_name, user.uid, home, sorted_characters, len(changed_ids)))
 
 
 async def run_achievement(bot: Bot, ev: Event) -> None:

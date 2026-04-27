@@ -102,7 +102,9 @@ class TajiduoRoleRef(_TajiduoModel):
 
 
 class _GameRolesPayload(_TajiduoModel):
-    bind_role: int = Field(0, alias="bindRole")
+    bind_role: int = Field(
+        0, alias="bindRole", description="主绑定角色 id；0 表示未设主绑定，需要触发 bind_role 日任务"
+    )
     roles: List[TajiduoRoleRef] = Field(default_factory=list)
 
 
@@ -115,8 +117,8 @@ class GameRoleList:
 
 
 class CommunitySignResult(_TajiduoModel):
-    exp: int = 0
-    gold_coin: int = Field(0, alias="goldCoin")
+    exp: int = Field(0, description="社区签到获得的经验")
+    gold_coin: int = Field(0, alias="goldCoin", description="社区签到获得的金币")
 
 
 class TeamRecommendation(_TajiduoModel):
@@ -129,9 +131,9 @@ class TeamRecommendation(_TajiduoModel):
 
 class GameRecordRoleInfo(_TajiduoModel):
     account: str = ""
-    game_id: int = Field(0, alias="gameId")
-    gender: int = -1
-    lev: int = 0
+    game_id: int = Field(0, alias="gameId", description="游戏 ID（异环 / 幻塔 等）")
+    gender: int = Field(-1, description="性别；-1 表示未填")
+    lev: int = Field(0, description="角色等级")
     role_id: int = Field(0, alias="roleId")
     role_name: str = Field("", alias="roleName")
     server_id: int = Field(0, alias="serverId")
@@ -155,39 +157,41 @@ class SignRewardRecord(_TajiduoModel):
 
 
 class RoleHomeAchieveProgress(_TajiduoModel):
-    achievement_cnt: int = Field(0, alias="achievementCnt")
-    total: int = 0
+    achievement_cnt: int = Field(0, alias="achievementCnt", description="已达成成就数")
+    total: int = Field(0, description="成就总数")
 
 
 class RoleHomeAreaProgress(_TajiduoModel):
     id: str
     name: str
-    progress: int = 0
-    total: int = 0
+    progress: int = Field(0, description="该地区已探索数")
+    total: int = Field(0, description="该地区可探索总数")
 
 
 class RoleHomeRealEstate(_TajiduoModel):
-    own_cnt: int = Field(0, alias="ownCnt")
-    show_id: str = Field("", alias="showId")
+    own_cnt: int = Field(0, alias="ownCnt", description="拥有房产数")
+    show_id: str = Field("", alias="showId", description="当前展示房产 id（用于出图）")
     show_name: str = Field("", alias="showName")
-    total: int = 0
+    total: int = Field(0, description="可获得房产总数")
 
 
 class RoleHomeVehicle(_TajiduoModel):
-    own_cnt: int = Field(0, alias="ownCnt")
-    show_id: str = Field("", alias="showId")
+    own_cnt: int = Field(0, alias="ownCnt", description="拥有载具数")
+    show_id: str = Field("", alias="showId", description="当前展示载具 id（用于出图）")
     show_name: str = Field("", alias="showName")
-    total: int = 0
+    total: int = Field(0, description="可获得载具总数")
 
 
 class RoleHomeCharacter(_TajiduoModel):
     id: str
     name: str
-    alev: int = 0
-    slev: int = 0
-    likeability_lev: int = Field(0, alias="likeabilitylev")
+    alev: int = Field(0, description="角色等级")
+    slev: int = Field(0, description="混频等级")
+    likeability_lev: int = Field(0, alias="likeabilitylev", description="好感度等级")
     awaken_lev: int = Field(0, alias="awakenLev", description="觉醒等级")
-    awaken_effect: List[str] = Field(default_factory=list, alias="awakenEffect")
+    awaken_effect: List[str] = Field(
+        default_factory=list, alias="awakenEffect", description="已激活的觉醒效果列表（Effect1…Effect6）"
+    )
     element_type: CharElement = Field(alias="elementType")
     group_type: CharGroup = Field(alias="groupType")
     quality: CharQuality
@@ -199,18 +203,20 @@ class RoleHome(_TajiduoModel):
     role_name: str = Field("", alias="rolename")
     server_id: str = Field("", alias="serverid")
     server_name: str = Field("", alias="servername")
-    avatar: str = ""
-    lev: int = 0
+    avatar: str = Field("", description="当前展示头像 id（通常是角色 id）")
+    lev: int = Field(0, description="角色等级")
     world_level: int = Field(0, alias="worldlevel")
-    tycoon_level: int = Field(0, alias="tycoonLevel")
-    role_login_days: int = Field(0, alias="roleloginDays")
-    charid_cnt: int = Field(0, alias="charidCnt")
-    stamina_value: int = Field(0, alias="staminaValue")
-    stamina_max_value: int = Field(0, alias="staminaMaxValue")
-    city_stamina_value: int = Field(0, alias="citystaminaValue")
-    city_stamina_max_value: int = Field(0, alias="citystaminaMaxValue")
-    day_value: int = Field(0, alias="dayvalue")
-    week_copies_remain_cnt: int = Field(0, alias="weekcopiesremainCnt")
+    tycoon_level: int = Field(0, alias="tycoonLevel", description="大亨等级；决定都市活力上限")
+    role_login_days: int = Field(0, alias="roleloginDays", description="角色累计活跃天数")
+    charid_cnt: int = Field(0, alias="charidCnt", description="已获得角色数")
+    stamina_value: int = Field(0, alias="staminaValue", description="本性像素当前值（体力）")
+    stamina_max_value: int = Field(0, alias="staminaMaxValue", description="本性像素上限")
+    city_stamina_value: int = Field(0, alias="citystaminaValue", description="都市活力当前值")
+    city_stamina_max_value: int = Field(
+        0, alias="citystaminaMaxValue", description="都市活力上限（受 tycoon_level 影响）"
+    )
+    day_value: int = Field(0, alias="dayvalue", description="今日活跃度（0–100）")
+    week_copies_remain_cnt: int = Field(0, alias="weekcopiesremainCnt", description="周本剩余次数（封顶 3）")
     achieve_progress: Optional[RoleHomeAchieveProgress] = Field(None, alias="achieveProgress")
     area_progress: List[RoleHomeAreaProgress] = Field(default_factory=list, alias="areaProgress")
     realestate: Optional[RoleHomeRealEstate] = None
@@ -281,17 +287,17 @@ class CharacterSuit(_TajiduoModel):
 class CharacterDetail(_TajiduoModel):
     id: str
     name: str
-    alev: int = 0
-    slev: int = 0
-    likeability_lev: int = Field(0, alias="likeabilitylev")
-    awaken_lev: int = Field(0, alias="awakenLev")
-    awaken_effect: List[str] = Field(default_factory=list, alias="awakenEffect")
+    alev: int = Field(0, description="角色等级")
+    slev: int = Field(0, description="混频等级")
+    likeability_lev: int = Field(0, alias="likeabilitylev", description="好感度等级")
+    awaken_lev: int = Field(0, alias="awakenLev", description="觉醒等级")
+    awaken_effect: List[str] = Field(default_factory=list, alias="awakenEffect", description="已激活的觉醒效果列表")
     element_type: CharElement = Field(alias="elementType")
     group_type: CharGroup = Field(alias="groupType")
     quality: CharQuality
-    properties: List[CharacterProperty] = Field(default_factory=list)
-    skills: List[CharacterSkill] = Field(default_factory=list)
-    city_skills: List[CharacterSkill] = Field(default_factory=list, alias="citySkills")
+    properties: List[CharacterProperty] = Field(default_factory=list, description="角色属性面板项")
+    skills: List[CharacterSkill] = Field(default_factory=list, description="战技列表")
+    city_skills: List[CharacterSkill] = Field(default_factory=list, alias="citySkills", description="城区技能列表")
     fork: CharacterFork = Field(default_factory=lambda: CharacterFork(groupType=None, buffName="", buffDes=""))
     suit: CharacterSuit = Field(default_factory=lambda: CharacterSuit(suitActivateNum=0))
 
@@ -304,11 +310,11 @@ class AchievementCategory(_TajiduoModel):
 
 
 class AchievementProgress(_TajiduoModel):
-    achievement_cnt: int = Field(0, alias="achievementCnt")
-    total: int = 0
-    bronze_umd_cnt: int = Field(0, alias="bronzeUmdCnt")
-    silver_umd_cnt: int = Field(0, alias="silverUmdCnt")
-    gold_umd_cnt: int = Field(0, alias="goldUmdCnt")
+    achievement_cnt: int = Field(0, alias="achievementCnt", description="已达成成就数")
+    total: int = Field(0, description="成就总数")
+    bronze_umd_cnt: int = Field(0, alias="bronzeUmdCnt", description="铜牌奖牌数")
+    silver_umd_cnt: int = Field(0, alias="silverUmdCnt", description="银牌奖牌数")
+    gold_umd_cnt: int = Field(0, alias="goldUmdCnt", description="金牌奖牌数")
     detail: List[AchievementCategory] = Field(default_factory=list)
 
 
@@ -378,11 +384,11 @@ class VehicleList(_TajiduoModel):
 
 
 class GameSignState(_TajiduoModel):
-    day: int
-    days: int
+    day: int = Field(description="今天是当月第几天")
+    days: int = Field(description="本月已签到累计天数")
     month: int
-    re_sign_cnt: int = Field(0, alias="reSignCnt")
-    today_sign: bool = Field(False, alias="todaySign")
+    re_sign_cnt: int = Field(0, alias="reSignCnt", description="本月可补签次数")
+    today_sign: bool = Field(False, alias="todaySign", description="今日是否已签")
 
 
 class GameSignReward(_TajiduoModel):
@@ -434,20 +440,20 @@ class RecommendPostList(_TajiduoModel):
 
 
 class UserCoinTaskState(_TajiduoModel):
-    today_get: int = Field(0, alias="todayGet")
-    today_total: int = Field(0, alias="todayTotal")
-    total: int = 0
+    today_get: int = Field(0, alias="todayGet", description="今日已获得金币")
+    today_total: int = Field(0, alias="todayTotal", description="今日金币上限")
+    total: int = Field(0, description="账户金币总数")
 
 
 class UserTask(_TajiduoModel):
     task_key: str = Field(alias="taskKey")
     title: str
-    coin: int = 0
-    exp: int = 0
-    complete_times: int = Field(0, alias="completeTimes")
-    cont_times: int = Field(0, alias="contTimes")
-    limit_times: int = Field(0, alias="limitTimes")
-    target_times: int = Field(1, alias="targetTimes")
+    coin: int = Field(0, description="完成一次的金币奖励")
+    exp: int = Field(0, description="完成一次的经验奖励")
+    complete_times: int = Field(0, alias="completeTimes", description="今日已完成次数")
+    cont_times: int = Field(0, alias="contTimes", description="任务子计数（如浏览/点赞）")
+    limit_times: int = Field(0, alias="limitTimes", description="今日封顶次数；到达后停止刷分")
+    target_times: int = Field(1, alias="targetTimes", description="单次完成所需的子计数次数")
     period: int = 0
     uid: int = 0
 

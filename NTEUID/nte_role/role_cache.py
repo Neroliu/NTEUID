@@ -5,9 +5,11 @@ from typing import Any
 from pathlib import Path
 
 import aiofiles
+from pydantic import ValidationError
 
 from gsuid_core.logger import logger
 
+from ..utils.sdk.tajiduo_model import CharacterDetail
 from ..utils.resource.RESOURCE_PATH import PLAYERINFO_PATH
 
 
@@ -22,18 +24,21 @@ async def save_role_characters_cache(role_id: str, payload: list[dict[str, Any]]
     return path
 
 
-async def load_role_characters_cache(role_id: str) -> list[dict[str, Any]] | None:
+async def load_role_characters_cache(role_id: str) -> list[CharacterDetail]:
+    """读 cache 并解析成 CharacterDetail 列表；首次跑、文件损坏、模型不兼容都返回空列表。"""
     path = get_role_cache_path(role_id)
     if not path.exists():
-        return None
+        return []
 
     try:
         async with aiofiles.open(path, "r", encoding="utf-8") as file:
             payload = json.loads(await file.read())
     except (OSError, json.JSONDecodeError) as error:
         logger.warning(f"[NTE角色详情] 读取角色缓存失败 {path}: {error!r}")
-        return None
+        return []
 
-    if not isinstance(payload, list):
-        return None
-    return [item for item in payload if isinstance(item, dict)]
+    try:
+        return [CharacterDetail.model_validate(item) for item in payload]
+    except ValidationError as error:
+        logger.warning(f"[NTE角色详情] 角色缓存与模型不兼容 {path}: {error!r}")
+        return []

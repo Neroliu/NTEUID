@@ -11,6 +11,7 @@ from gsuid_core.models import Event
 from gsuid_core.utils.image.convert import convert_img
 from gsuid_core.utils.image.image_tools import get_event_avatar
 
+from .role_sort import sort_characters
 from ..utils.image import (
     add_footer,
     get_nte_bg,
@@ -198,7 +199,7 @@ async def _build_char_stats(
     home: RoleHome,
     characters: list[CharacterDetail],
 ) -> list[_CharStat]:
-    source = characters if characters else home.characters
+    source = sort_characters(characters) if characters else home.characters
     result: list[_CharStat] = []
     for item in source:
         try:

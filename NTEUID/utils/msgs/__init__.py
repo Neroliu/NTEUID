@@ -72,7 +72,6 @@ class RoleMsg:
     LOAD_FAILED = "角色数据暂时无法获取，请稍后再试"
     LOCAL_EMPTY = "暂无本地角色详情数据"
     REFRESH_FAILED = "角色面板刷新失败，请稍后再试"
-    REFRESH_DONE = "角色面板刷新完成"
     CHAR_NOT_FOUND = "未找到该角色（检查角色名）"
     EMPTY = "暂无可展示的数据"
 

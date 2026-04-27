@@ -11,10 +11,13 @@ from PIL import Image, ImageOps, ImageDraw, ImageFont
 from gsuid_core.utils.image.image_tools import crop_center_img
 from gsuid_core.utils.download_resource.download_file import download
 
+from .fonts.nte_fonts import nte_font_30, nte_font_42, nte_font_50
 from ..utils.resource.RESOURCE_PATH import QR_PATH
 
 ICON = Path(__file__).parent.parent.parent / "ICON.png"
 TEXT_PATH = Path(__file__).parent / "texture2d"
+CARD_LONG_PATH = TEXT_PATH / "card_long"
+FRAME_PATH = TEXT_PATH / "frame"
 
 Color = Union[Tuple[int, int, int], Tuple[int, int, int, int]]
 Box = Tuple[int, int, int, int]  # (left, top, right, bottom)
@@ -107,10 +110,11 @@ def rounded_mask(size: Size, radius: int) -> Image.Image:
 
 
 def circle_mask(diameter: int) -> Image.Image:
-    """正圆 L 模式遮罩（头像用）。"""
-    mask = Image.new("L", (diameter, diameter), 0)
-    ImageDraw.Draw(mask).ellipse((0, 0, diameter, diameter), fill=255)
-    return mask
+    """正圆 L 模式遮罩（头像用）。4× 超采样 + LANCZOS 缩回，抗锯齿无白边。"""
+    big = diameter * 4
+    mask = Image.new("L", (big, big), 0)
+    ImageDraw.Draw(mask).ellipse((0, 0, big - 1, big - 1), fill=255)
+    return mask.resize((diameter, diameter), Image.Resampling.LANCZOS)
 
 
 def line_height(font: ImageFont.FreeTypeFont) -> int:
@@ -222,29 +226,14 @@ def draw_text_block(
     return y
 
 
-def paste_rounded_image(
-    canvas: Image.Image,
-    image: Image.Image,
-    xy: Tuple[int, int],
-    size: Size,
-    radius: int,
-) -> None:
-    fitted = ImageOps.fit(image.convert("RGBA"), size, method=Image.Resampling.LANCZOS)
-    canvas.paste(fitted, xy, rounded_mask(size, radius))
-
-
-def paste_circle_image(
-    canvas: Image.Image,
-    image: Image.Image,
-    xy: Tuple[int, int],
-    diameter: int,
-) -> None:
-    fitted = ImageOps.fit(
-        image.convert("RGBA"),
-        (diameter, diameter),
-        method=Image.Resampling.LANCZOS,
-    )
-    canvas.paste(fitted, xy, circle_mask(diameter))
+def char_img_ring(avatar: Image.Image, size: int) -> Image.Image:
+    """角色头像圆框（size×size RGBA）"""
+    canvas = Image.new("RGBA", (size, size))
+    head = avatar.convert("RGBA").resize((size, size))
+    mask = Image.open(TEXT_PATH / "head_mask.png").convert("L").resize((size, size))
+    canvas.paste(head, (0, 0), mask)
+    canvas.alpha_composite(Image.open(TEXT_PATH / "head_ring.png").convert("RGBA").resize((size, size)))
+    return canvas
 
 
 def make_head_avatar(
@@ -252,23 +241,23 @@ def make_head_avatar(
 ) -> Image.Image:
     """头像 mask 裁圆 + head_ring 内圈 + 随机 texture2d/frame/*.png 外框。
     `size` 是最终画布和外框尺寸；`avatar_size` 是头像直径，比 `size` 小越多、头像离外框越远。"""
-    head = avatar.convert("RGBA").resize((avatar_size, avatar_size))
-    mask = Image.open(TEXT_PATH / "head_mask.png").convert("L").resize((avatar_size, avatar_size))
-    head.putalpha(mask)
-    head_ring = Image.open(TEXT_PATH / "head_ring.png").convert("RGBA").resize((avatar_size, avatar_size))
-    head.alpha_composite(head_ring)
-
     canvas = Image.new("RGBA", (size, size))
     offset = (size - avatar_size) // 2
-    canvas.alpha_composite(head, (offset, offset))
+
+    head = avatar.convert("RGBA").resize((avatar_size, avatar_size))
+    mask = Image.open(TEXT_PATH / "head_mask.png").convert("L").resize((avatar_size, avatar_size))
+    canvas.paste(head, (offset, offset), mask)
+    canvas.alpha_composite(
+        Image.open(TEXT_PATH / "head_ring.png").convert("RGBA").resize((avatar_size, avatar_size)),
+        (offset, offset),
+    )
 
     frame_path = (
         TEXT_PATH / "frame" / f"{frame_id}.png"
         if frame_id
         else random.choice(list((TEXT_PATH / "frame").glob("*.png")))
     )
-    ring = Image.open(frame_path).convert("RGBA").resize((size, size))
-    canvas.alpha_composite(ring)
+    canvas.alpha_composite(Image.open(frame_path).convert("RGBA").resize((size, size)))
     return canvas
 
 
@@ -377,6 +366,53 @@ def get_nte_title_bg(width: int, height: int, *, game: str = "yihuan") -> Image.
     `game` 选 `yihuan` / `huanta`，对应 `home-yihuan.webp` / `home-huanta.webp`。"""
     image = Image.open(TEXT_PATH / f"home-{game}.webp").convert("RGB")
     return ImageOps.fit(image, (width, height), method=Image.Resampling.LANCZOS, centering=(0.5, 0.0))
+
+
+def _load_card_long(card_long_id: Optional[str] = None) -> Image.Image:
+    if card_long_id:
+        path = CARD_LONG_PATH / f"{card_long_id}.png"
+    else:
+        path = random.choice(list(CARD_LONG_PATH.glob("*.png")))
+    return Image.open(path).convert("RGBA")
+
+
+def make_nte_role_title(
+    qq_avatar: Image.Image,
+    role_name: str,
+    uid: Union[str, int],
+    level: Optional[int] = None,
+    *,
+    frame_id: Optional[str] = None,
+    card_long_id: Optional[str] = None,
+) -> Image.Image:
+    """通用 QQ 头像 + 角色名 + UID (+ 等级) title，返回 1100×216 RGBA。"""
+    uid_layer = Image.open(TEXT_PATH / "uid_bg.png").convert("RGBA")
+    ImageDraw.Draw(uid_layer).text((385, 145), f"UID {uid}", font=nte_font_30, fill=COLOR_DARK, anchor="mm")
+
+    avatar_block = make_head_avatar(qq_avatar, size=216, avatar_size=198, frame_id=frame_id)
+
+    canvas = Image.new("RGBA", (1100, 216), (0, 0, 0, 0))
+
+    mask = Image.open(TEXT_PATH / "maskB.png").convert("RGBA")
+    card_long = _load_card_long(card_long_id).resize((1528, 128), Image.Resampling.LANCZOS)
+    banner_layer = Image.new("RGBA", (1100, 199), (0, 0, 0, 0))
+    banner_layer.paste(card_long, (-428, 56))
+    banner = Image.new("RGBA", (1100, 199), (0, 0, 0, 0))
+    banner.paste(banner_layer, (0, 0), mask=mask.split()[3])
+    canvas.alpha_composite(banner, (0, 8))
+
+    canvas.alpha_composite(uid_layer, (0, 8))
+
+    ImageDraw.Draw(canvas).text((335, 98), role_name, font=nte_font_50, fill=COLOR_WHITE, anchor="mm")
+
+    canvas.alpha_composite(avatar_block, (0, 0))
+
+    if level is not None:
+        level_block = Image.open(TEXT_PATH / "level.png").convert("RGBA")
+        ImageDraw.Draw(level_block).text((53, 53), str(level), font=nte_font_42, fill=COLOR_WHITE, anchor="mm")
+        canvas.alpha_composite(level_block, (904, 75))
+
+    return canvas
 
 
 def get_footer():
