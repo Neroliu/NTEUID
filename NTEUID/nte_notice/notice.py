@@ -28,7 +28,7 @@ async def get_notice(bot: Bot, ev: Event):
         if not text.isdigit():
             return await send_nte_notify(bot, ev, NoticeMsg.INVALID_POST_ID)
         post = await tajiduo_web.get_notice_detail(int(text))
-        img = await draw_notice_detail_img(*render_notice_detail(post))
+        img = await draw_notice_detail_img(post)
         return await bot.send(img)  # pyright: ignore[reportArgumentType]
     except TajiduoError as error:
         logger.warning(f"[异环公告] 拉取公告失败: {error.message}")
@@ -46,10 +46,6 @@ def render_notice_list(columns: dict[NTENoticeType, list[NoticePost]]) -> dict[s
         notice_type.label: [_to_list_item(post) for post in columns.get(notice_type, [])]
         for notice_type in NOTICE_TYPES
     }
-
-
-def render_notice_detail(post: NoticePost) -> tuple[NoticePost]:
-    return (post,)
 
 
 def _to_list_item(post: NoticePost) -> tuple[str, str, str, str]:

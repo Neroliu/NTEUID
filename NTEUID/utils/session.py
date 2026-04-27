@@ -24,6 +24,12 @@ _AUTH_STATUSES = {401, 402, 403}
 _refresh_inflight: dict[str, "asyncio.Future[tuple[str, str]]"] = {}
 
 
+def _consume_future_exception(fut: "asyncio.Future[tuple[str, str]]") -> None:
+    if fut.cancelled():
+        return
+    fut.exception()
+
+
 async def ensure_tajiduo_client(user: NTEUser) -> TajiduoClient:
     """返回带可用 access_token 的 client。DB 缓存未过 TTL 直接复用、零网络；
     超 TTL 或无缓存时调一次 refresh 并落库。同 center_uid 并发场景由
@@ -66,6 +72,7 @@ async def _refresh_singleflight(user: NTEUser, client: TajiduoClient) -> Tuple[s
         return result
     except BaseException as exc:
         if not fut.done():
+            fut.add_done_callback(_consume_future_exception)
             fut.set_exception(exc)
         raise
     finally:
