@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import hashlib
 from typing import List, Tuple, Optional
-from pathlib import Path
 from datetime import datetime
 from dataclasses import dataclass
 
@@ -24,6 +23,7 @@ from ..utils.sdk.tajiduo import TajiduoClient
 from ..utils.game_registry import PRIMARY_GAME_ID, GAME_SIGN_SWITCHES
 from ..nte_config.nte_config import NTEConfig
 from ..utils.sdk.tajiduo_model import GameRoleList, TajiduoError
+from ..utils.resource.RESOURCE_PATH import QR_PATH
 
 LOGIN_CACHE: TimedCache = TimedCache(timeout=600, maxsize=32)
 LOGIN_WAIT_SECONDS = 600
@@ -41,7 +41,7 @@ class LoginState:
     msg: str = ""
 
 
-@dataclass
+@dataclass(frozen=True)
 class LoginResult:
     ok: bool
     msg: str = ""
@@ -238,7 +238,7 @@ async def _send_login_link(bot: Bot, ev: Event, url: str) -> None:
     private_onebot = not ev.group_id and ev.bot_id == "onebot"
 
     if NTEConfig.get_config("NTEQRLogin").data:
-        path = Path(__file__).parent / f"{ev.user_id}.gif"
+        path = QR_PATH / f"{ev.user_id}.gif"
         im = [
             f"[异环] 您的id为【{ev.user_id}】\n",
             LoginMsg.LINK_QR,

@@ -45,8 +45,6 @@ _TASK_LABELS = {
 async def sign_account(users: List[NTEUser]) -> str:
     """单账号完整签到：refresh → App 签 → 角色游戏签 → 社区任务。
     假设调用方已持有该 center_uid 的账号级锁，内部不再加锁。
-    进程级锁：`sign_runner._account_locks` 仅挡单进程竞态；多实例/多进程部署下
-    两层幂等会退化为"仅远程 state + POST 去重"，需注意。
     """
     primary = users[0]
     header = f"[账号 {primary.center_uid}]"

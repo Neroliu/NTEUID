@@ -78,7 +78,7 @@ class CharGroup(str, Enum):
     FIVE = "CHARACTER_GROUP_TYPE_FIVE"
 
 
-@dataclass
+@dataclass(frozen=True)
 class TajiduoSession:
     access_token: str
     refresh_token: str

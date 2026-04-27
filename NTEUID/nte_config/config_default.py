@@ -29,7 +29,7 @@ CONFIG_DEFAULT: Dict[str, GSC] = {
     ),
     "NTEAnnCheckMinutes": GsIntConfig(
         "公告检测时间（单位min）",
-        "公告检测时间（单位min）",
+        "公告检测时间（单位min），重启后生效",
         10,
         60,
     ),

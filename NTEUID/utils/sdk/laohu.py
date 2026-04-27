@@ -39,7 +39,7 @@ class LaohuDevice:
             self.adm = self.device_id
 
 
-@dataclass
+@dataclass(frozen=True)
 class LaohuAccount:
     user_id: int
     token: str
