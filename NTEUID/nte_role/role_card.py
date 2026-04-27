@@ -172,17 +172,14 @@ async def _draw_area_cards(canvas: Image.Image, y: int, areas: list[RoleHomeArea
 
         # 套路：mask/bg 都用原生尺寸，组装完再 resize 到 card slot
         mine_bg = exp_bg_raw.copy()
-        try:
+        area_raw = await get_area_wide_img(area.id)
+        if area_raw is not None:
             temp_bg = Image.new("RGBA", exp_mask.size)
             temp_bg2 = Image.new("RGBA", exp_mask.size)
-            area_img = ImageOps.fit(
-                (await get_area_wide_img(area.id)).convert("RGBA"), exp_mask.size, Image.Resampling.LANCZOS
-            )
+            area_img = ImageOps.fit(area_raw, exp_mask.size, Image.Resampling.LANCZOS)
             temp_bg.alpha_composite(area_img, (0, 0))
             temp_bg2.paste(temp_bg, (0, 0), exp_mask)
             mine_bg.alpha_composite(temp_bg2, (0, 0))
-        except OSError:
-            pass
 
         canvas.alpha_composite(mine_bg.resize((card_w, card_h), Image.Resampling.LANCZOS), (card_x, card_y))
 
@@ -202,27 +199,15 @@ async def _build_char_stats(
     source = sort_characters(characters) if characters else home.characters
     result: list[_CharStat] = []
     for item in source:
-        try:
-            avatar = await get_char_detail_img(item.id)
-        except OSError:
-            avatar = None
-        try:
-            element_icon = await get_char_element_img(item.element_type.value)
-        except OSError:
-            element_icon = None
-        try:
-            group_icon = await get_char_group_img(item.group_type.value)
-        except OSError:
-            group_icon = None
         result.append(
             _CharStat(
                 level=item.alev,
                 awaken=item.awaken_lev,
                 quality=item.quality,
                 element=item.element_type,
-                avatar=avatar,
-                element_icon=element_icon,
-                group_icon=group_icon,
+                avatar=await get_char_detail_img(item.id),
+                element_icon=await get_char_element_img(item.element_type.value),
+                group_icon=await get_char_group_img(item.group_type.value),
             )
         )
     return result

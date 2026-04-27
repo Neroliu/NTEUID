@@ -12,9 +12,11 @@ from gsuid_core.utils.image.image_tools import get_event_avatar
 
 from ..utils.image import (
     COLOR_WHITE,
+    vw,
     wrap_text,
     add_footer,
     get_nte_bg,
+    open_texture,
     rounded_mask,
     clean_rich_text,
     make_nte_role_title,
@@ -44,14 +46,6 @@ from ..utils.sdk.tajiduo_model import (
 WIDTH = 1080
 PADDING = 36
 FOOTER_RESERVE = 80
-
-# 官方 vw 单位：design width = 390 → render = 1080
-SCALE = 1080 / 390
-
-
-def vw(n: float) -> int:
-    return round(n * SCALE)
-
 
 OUTER_RADIUS = vw(20)
 OUTER_PAD_X = vw(15)
@@ -96,7 +90,6 @@ AWAKEN_SLOT_BOX = vw(33)  # h-vw-33
 AWAKEN_SLOT_RING = vw(30)  # r5 w-vw-30
 AWAKEN_SLOT_INNER = vw(29)  # inner img w-vw-29
 AWAKEN_SLOT_LOCK = vw(20)  # nx (effect_lock) — 官方为 w-vw-29 但锁图本身较小，我们按贴图比例
-AWAKEN_SLOTS_GAP = vw(15)
 
 PROP_INNER_RADIUS = vw(8)
 PROP_INNER_PAD_X = vw(10)
@@ -170,14 +163,12 @@ SUIT_TOP_BOTTOM_GAP = vw(14)  # mt-vw-14 between top and drive grid
 DRIVE_CARD_RADIUS = vw(6)
 DRIVE_CARD_PAD_Y = vw(6)
 DRIVE_CARD_PAD_X = vw(6)
-DRIVE_TOP_GAP_X = vw(6)
 DRIVE_ICON_BG_W = vw(36)  # ix w-vw-36
 DRIVE_ICON_W = vw(29)  # drive icon w-vw-29
 DRIVE_NAME_FONT = vw(12)
 DRIVE_LEV_FONT = vw(10)
 DRIVE_LEV_PAD_X = vw(10)
 DRIVE_LEV_PAD_Y = vw(2)
-DRIVE_INNER_RADIUS = vw(4)
 DRIVE_INNER_TITLE_FONT = vw(10)
 DRIVE_PROP_ICON_W = vw(13)
 DRIVE_PROP_NAME_FONT = vw(11)
@@ -185,7 +176,6 @@ DRIVE_PROP_VALUE_FONT = vw(11)
 DRIVE_PROP_ROW_H = vw(20)
 DRIVE_GRID_GAP_X = vw(6)  # gap-x-vw-6
 DRIVE_GRID_GAP_Y = vw(6)
-DRIVE_INFO_TOP_GAP = vw(2)  # ml-vw-3 + mt-vw-1 etc
 
 COLOR_OUTER = (239, 239, 239, 255)  # #EFEFEF
 COLOR_INNER = (220, 220, 220, 255)  # #DCDCDC
@@ -364,40 +354,27 @@ def _draw_colored_lines(
 
 TEXTURE_PATH = Path(__file__).parent / "texture2d" / "character"
 
-
-def _load(name: str) -> Image.Image:
-    return Image.open(TEXTURE_PATH / name).convert("RGBA")
-
-
 # 预加载静态贴图
-QUALITY_LETTER_BG = _load("quality_letter_bg.png").resize((QUALITY_BLOCK_W, QUALITY_BLOCK_W), Image.Resampling.LANCZOS)
-QUALITY_S_LETTER = _load("quality_S_letter.png").resize((QUALITY_LETTER_W, QUALITY_LETTER_W), Image.Resampling.LANCZOS)
-QUALITY_A_LETTER = _load("quality_A_letter.png").resize((QUALITY_LETTER_W, QUALITY_LETTER_W), Image.Resampling.LANCZOS)
-LIKEABILITY_ICON = _load("likeability_icon.png").resize(
-    (LIKEABILITY_ICON_W, LIKEABILITY_ICON_W), Image.Resampling.LANCZOS
-)
-AWAKEN_RING = _load("awaken_band_bg.png").resize((AWAKEN_SLOT_RING, AWAKEN_SLOT_RING), Image.Resampling.LANCZOS)
-AWAKEN_LOCK = _load("awaken_slot_lock.png").resize((AWAKEN_SLOT_LOCK, AWAKEN_SLOT_LOCK), Image.Resampling.LANCZOS)
-SKILL_CELL_BG = _load("city_skill_cell.png").resize((SKILL_BG_W, SKILL_BG_W), Image.Resampling.LANCZOS)
-SKILL_CELL_BG_PASSIVE = _load("city_skill_cell.png").resize(
-    (SKILL_BG_W_PASSIVE, SKILL_BG_W_PASSIVE), Image.Resampling.LANCZOS
-)
-CITY_CELL_BG = _load("city_skill_cell.png").resize((CITY_CELL_W, CITY_CELL_W), Image.Resampling.LANCZOS)
-SUIT_TOP_BG = _load("suit_top_bg.png")
-DRIVE_CELL_BG_FORK = _load("drive_cell_bg.png").resize((FORK_ICON_PANEL_W, FORK_ICON_PANEL_W), Image.Resampling.LANCZOS)
-DRIVE_CELL_BG_DRIVE = _load("drive_cell_bg.png").resize((DRIVE_ICON_BG_W, DRIVE_ICON_BG_W), Image.Resampling.LANCZOS)
-DRIVE_STAR = _load("drive_star.png").resize((FORK_STAR_W, FORK_STAR_W), Image.Resampling.LANCZOS)
-DRIVE_STAR_NONE = _load("drive_star_none.png").resize((FORK_STAR_W, FORK_STAR_W), Image.Resampling.LANCZOS)
-SECTION_PROPS_ICON = _load("section_props_icon.png").resize((SEC_ICON_SIZE, SEC_ICON_SIZE), Image.Resampling.LANCZOS)
-SECTION_SKILL_ICON = _load("char_skill_attr.png").resize((SEC_ICON_SIZE, SEC_ICON_SIZE), Image.Resampling.LANCZOS)
-SECTION_ATTR_ICON = _load("char_section_attr.png").resize((SEC_ICON_SIZE, SEC_ICON_SIZE), Image.Resampling.LANCZOS)
-INNER_BATTLE_ICON = _load("section_battle_skill_icon.png").resize(
-    (INNER_HEAD_ICON, INNER_HEAD_ICON), Image.Resampling.LANCZOS
-)
-INNER_CITY_ICON = _load("char_city_section.png").resize((INNER_HEAD_ICON, INNER_HEAD_ICON), Image.Resampling.LANCZOS)
-SUIT_COND_ADD = _load("suit_condition_add_icon.png").resize(
-    (SUIT_COND_ADD_W, SUIT_COND_ADD_W), Image.Resampling.LANCZOS
-)
+QUALITY_LETTER_BG = open_texture(TEXTURE_PATH / "quality_letter_bg.png", (QUALITY_BLOCK_W, QUALITY_BLOCK_W))
+QUALITY_S_LETTER = open_texture(TEXTURE_PATH / "quality_S_letter.png", (QUALITY_LETTER_W, QUALITY_LETTER_W))
+QUALITY_A_LETTER = open_texture(TEXTURE_PATH / "quality_A_letter.png", (QUALITY_LETTER_W, QUALITY_LETTER_W))
+LIKEABILITY_ICON = open_texture(TEXTURE_PATH / "likeability_icon.png", (LIKEABILITY_ICON_W, LIKEABILITY_ICON_W))
+AWAKEN_RING = open_texture(TEXTURE_PATH / "awaken_band_bg.png", (AWAKEN_SLOT_RING, AWAKEN_SLOT_RING))
+AWAKEN_LOCK = open_texture(TEXTURE_PATH / "awaken_slot_lock.png", (AWAKEN_SLOT_LOCK, AWAKEN_SLOT_LOCK))
+SKILL_CELL_BG = open_texture(TEXTURE_PATH / "city_skill_cell.png", (SKILL_BG_W, SKILL_BG_W))
+SKILL_CELL_BG_PASSIVE = open_texture(TEXTURE_PATH / "city_skill_cell.png", (SKILL_BG_W_PASSIVE, SKILL_BG_W_PASSIVE))
+CITY_CELL_BG = open_texture(TEXTURE_PATH / "city_skill_cell.png", (CITY_CELL_W, CITY_CELL_W))
+SUIT_TOP_BG = open_texture(TEXTURE_PATH / "suit_top_bg.png")
+DRIVE_CELL_BG_FORK = open_texture(TEXTURE_PATH / "drive_cell_bg.png", (FORK_ICON_PANEL_W, FORK_ICON_PANEL_W))
+DRIVE_CELL_BG_DRIVE = open_texture(TEXTURE_PATH / "drive_cell_bg.png", (DRIVE_ICON_BG_W, DRIVE_ICON_BG_W))
+DRIVE_STAR = open_texture(TEXTURE_PATH / "drive_star.png", (FORK_STAR_W, FORK_STAR_W))
+DRIVE_STAR_NONE = open_texture(TEXTURE_PATH / "drive_star_none.png", (FORK_STAR_W, FORK_STAR_W))
+SECTION_PROPS_ICON = open_texture(TEXTURE_PATH / "section_props_icon.png", (SEC_ICON_SIZE, SEC_ICON_SIZE))
+SECTION_SKILL_ICON = open_texture(TEXTURE_PATH / "char_skill_attr.png", (SEC_ICON_SIZE, SEC_ICON_SIZE))
+SECTION_ATTR_ICON = open_texture(TEXTURE_PATH / "char_section_attr.png", (SEC_ICON_SIZE, SEC_ICON_SIZE))
+INNER_BATTLE_ICON = open_texture(TEXTURE_PATH / "section_battle_skill_icon.png", (INNER_HEAD_ICON, INNER_HEAD_ICON))
+INNER_CITY_ICON = open_texture(TEXTURE_PATH / "char_city_section.png", (INNER_HEAD_ICON, INNER_HEAD_ICON))
+SUIT_COND_ADD = open_texture(TEXTURE_PATH / "suit_condition_add_icon.png", (SUIT_COND_ADD_W, SUIT_COND_ADD_W))
 
 
 sec_title_font = nte_font_origin(SEC_TITLE_FONT)
@@ -428,13 +405,6 @@ drive_lev_font = nte_font_origin(DRIVE_LEV_FONT)
 drive_title_font = nte_font_origin(DRIVE_INNER_TITLE_FONT)
 drive_prop_name_font = nte_font_origin(DRIVE_PROP_NAME_FONT)
 drive_prop_value_font = nte_font_origin(DRIVE_PROP_VALUE_FONT)
-
-
-async def _safe(coro) -> Image.Image | None:
-    try:
-        return await coro
-    except OSError:
-        return None
 
 
 def _resize(img: Image.Image | None, size: int) -> Image.Image | None:
@@ -528,7 +498,7 @@ async def _draw_portrait(
     layer.alpha_composite(_make_nte_watermark(panel_w, panel_h), (0, 0))
 
     # 半身像 h-vw-226 w-full
-    art = await _safe(get_char_detail_img(character.id))
+    art = await get_char_detail_img(character.id)
     if art is not None:
         art = art.convert("RGBA")
         ratio = panel_w / art.width
@@ -546,8 +516,8 @@ async def _draw_portrait(
     # ---- 左上块 ----
     left_x = x + PORTRAIT_LEFT_INSET
     top_y = y + PORTRAIT_TOP_INSET
-    elem_img = _resize(await _safe(get_char_element_img(character.element_type.value)), ELEM_ICON_SIZE)
-    group_img = _resize(await _safe(get_char_group_black_img(character.group_type.value)), GROUP_ICON_SIZE)
+    elem_img = _resize(await get_char_element_img(character.element_type.value), ELEM_ICON_SIZE)
+    group_img = _resize(await get_char_group_black_img(character.group_type.value), GROUP_ICON_SIZE)
     icon_col_w = max(ELEM_ICON_SIZE, GROUP_ICON_SIZE)
     if elem_img is not None:
         canvas.alpha_composite(elem_img, (left_x + (icon_col_w - ELEM_ICON_SIZE) // 2, top_y))
@@ -635,7 +605,7 @@ async def _draw_portrait(
         # inner: 解锁 → effect 图，未解锁 → 锁
         if slot < awaken_n and slot < len(character.awaken_effect):
             effect_img = _resize(
-                await _safe(get_char_awaken_img(character.id, character.awaken_effect[slot])),
+                await get_char_awaken_img(character.id, character.awaken_effect[slot]),
                 AWAKEN_SLOT_INNER,
             )
             if effect_img is not None:
@@ -674,7 +644,7 @@ async def _draw_props(
 
     # 2 列 × 3 行；col0=props[0:3], col1=props[3:6]
     col_w = (width - PROP_INNER_PAD_X * 2 - PROP_GAP_X) // 2
-    icons = [await _safe(get_char_property_img(p.id)) for p in visible]
+    icons = [await get_char_property_img(p.id) for p in visible]
     for idx, (prop, icon) in enumerate(zip(visible, icons)):
         col = idx // 3
         row = idx % 3
@@ -734,7 +704,7 @@ async def _draw_battle_skill_cell(
     bg_y_offset = 0
     bg_x = x + (cell_w - bg_w) // 2
     canvas.alpha_composite(SKILL_CELL_BG if bg_w == SKILL_BG_W else SKILL_CELL_BG_PASSIVE, (bg_x, y + bg_y_offset))
-    icon = _resize(await _safe(get_char_skill_img(skill.id)), icon_w) if skill.id else None
+    icon = _resize(await get_char_skill_img(skill.id), icon_w) if skill.id else None
     if icon is not None:
         canvas.alpha_composite(icon, (x + (cell_w - icon_w) // 2, y + bg_y_offset + (bg_w - icon_w) // 2))
     name_y = y + bg_w + SKILL_NAME_GAP
@@ -829,7 +799,7 @@ async def _draw_city_skills_panel(
     for skill in skills:
         canvas.alpha_composite(CITY_CELL_BG, (start_x, cy))
         if skill.id:
-            icon = _resize(await _safe(get_char_city_skill_img(skill.id)), CITY_CELL_W)
+            icon = _resize(await get_char_city_skill_img(skill.id), CITY_CELL_W)
             if icon is not None:
                 canvas.alpha_composite(icon, (start_x, cy))
         name_y = cy + CITY_CELL_W + SKILL_NAME_GAP
@@ -925,7 +895,7 @@ async def _draw_fork_chip(
 ) -> int:
     """K5：bg-#CCCCCC rounded， icon + name + +value。"""
     x, y = xy
-    icon = _resize(await _safe(get_char_property_img(prop.id)), FORK_PROP_ICON_W)
+    icon = _resize(await get_char_property_img(prop.id), FORK_PROP_ICON_W)
     name = prop.name or ""
     value = f"+{_format_value(prop.value)}"
     pad = FORK_PROP_CHIP_PAD_X
@@ -965,7 +935,7 @@ async def _draw_fork(
 
     # I5: 左 icon panel + 右 name/lv/stars
     canvas.alpha_composite(DRIVE_CELL_BG_FORK, (body_x, body_y))
-    fork_img = _resize(await _safe(get_weapon_img(fork.id)), FORK_ICON_W) if fork.id else None
+    fork_img = _resize(await get_weapon_img(fork.id), FORK_ICON_W) if fork.id else None
     if fork_img is not None:
         canvas.alpha_composite(
             fork_img,
@@ -974,9 +944,7 @@ async def _draw_fork(
     right_x = body_x + FORK_ICON_PANEL_W + FORK_RIGHT_ML
     right_y = body_y
     group_img = (
-        _resize(await _safe(get_char_group_black_img(fork.group_type.value)), FORK_GROUP_ICON_W)
-        if fork.group_type
-        else None
+        _resize(await get_char_group_black_img(fork.group_type.value), FORK_GROUP_ICON_W) if fork.group_type else None
     )
     if group_img is not None:
         canvas.alpha_composite(group_img, (right_x, right_y + vw(2)))
@@ -1088,7 +1056,7 @@ async def _draw_drive_card(
     top_x = x + pad_x
     top_y = y + pad_y
     canvas.alpha_composite(DRIVE_CELL_BG_DRIVE, (top_x, top_y))
-    drive_icon = _resize(await _safe(get_char_suit_drive_img(item.id)), DRIVE_ICON_W) if item.id else None
+    drive_icon = _resize(await get_char_suit_drive_img(item.id), DRIVE_ICON_W) if item.id else None
     if drive_icon is not None:
         canvas.alpha_composite(
             drive_icon,
@@ -1154,7 +1122,7 @@ async def _draw_drive_prop_row(
     else:
         bg = Image.new("RGBA", (width, DRIVE_PROP_ROW_H), (255, 255, 255, 255))
         canvas.alpha_composite(bg, (x, y))
-    icon = _resize(await _safe(get_char_property_img(prop.id)), DRIVE_PROP_ICON_W) if prop.id else None
+    icon = _resize(await get_char_property_img(prop.id), DRIVE_PROP_ICON_W) if prop.id else None
     icon_x = x + vw(5)
     if icon is not None:
         canvas.alpha_composite(icon, (icon_x, y + (DRIVE_PROP_ROW_H - DRIVE_PROP_ICON_W) // 2))
@@ -1230,7 +1198,7 @@ async def _draw_suit(
             cond_imgs.append(SUIT_COND_ADD)
             cond_total_w += SUIT_COND_ADD_W
         else:
-            img = _resize(await _safe(get_char_suit_detail_img(it)), SUIT_COND_ICON_W)
+            img = _resize(await get_char_suit_detail_img(it), SUIT_COND_ICON_W)
             cond_imgs.append(img)
             cond_total_w += SUIT_COND_ICON_W
     cond_total_w += max(0, len(items) - 1) * vw(4)

@@ -11,13 +11,19 @@ from gsuid_core.utils.image.convert import convert_img
 from gsuid_core.utils.image.image_tools import get_event_avatar
 
 from ..utils.image import (
+    VW_SCALE as SCALE,
     add_footer,
     get_nte_bg,
+    open_texture,
     rounded_mask,
     char_img_ring,
     make_nte_role_title,
 )
-from ..utils.resource.cdn import get_char_tall_img, get_furniture_img, get_realestate_img
+from ..utils.resource.cdn import (
+    get_char_tall_img,
+    get_furniture_img,
+    get_realestate_img,
+)
 from ..utils.fonts.nte_fonts import nte_font_origin
 from ..utils.sdk.tajiduo_model import House, Furniture
 
@@ -25,8 +31,6 @@ WIDTH = 1080
 FOOTER_RESERVE = 80
 
 TEXTURE_PATH = Path(__file__).parent / "texture2d" / "realestate"
-
-SCALE = 1080 / 390
 PAGE_PAD_X = round(15 * SCALE)
 CONTENT_WIDTH = WIDTH - PAGE_PAD_X * 2
 
@@ -39,7 +43,6 @@ HEADER_ROW_INSET = round(5 * SCALE)
 PIN_SIZE = round(16 * SCALE)
 NAME_GAP = round(5 * SCALE)
 NAME_FONT = round(15 * SCALE)
-LOC_FONT = round(12 * SCALE)
 BODY_TOP_PAD = round(5 * SCALE)
 BODY_INSET_X = round(10 * SCALE)
 BODY_INSET_Y = round(8 * SCALE)
@@ -65,8 +68,6 @@ GRID_GAP = round(5 * SCALE)
 GRID_RADIUS = round(6 * SCALE)
 FURN_BG_SIZE = round(62 * SCALE)
 FURN_INNER_SIZE = round(47 * SCALE)
-FURN_NAME_FONT = round(9 * SCALE)
-FURN_NAME_GAP = round(2 * SCALE)
 FURN_LOCK_SIZE = round(62 * SCALE)
 FURN_LOCK_FONT = round(9 * SCALE)
 LOGO_W = round(97 * SCALE)
@@ -74,34 +75,23 @@ LOGO_PAD_Y = round(8 * SCALE)
 
 COLOR_CARD_BG = (48, 48, 50, 255)
 COLOR_NAME = (231, 108, 13)
-COLOR_LOC = (170, 170, 170)
 COLOR_CHIP_BG = (70, 70, 70)
 COLOR_CHIP_TEXT = (241, 241, 241)
 COLOR_SEC_TITLE = (229, 229, 229)
-COLOR_FURN_NAME = (235, 235, 235)
 COLOR_FURN_LOCK_TEXT = (195, 195, 195)
 COLOR_GRID_BG = (0, 0, 0, 255)
 
 name_font = nte_font_origin(NAME_FONT)
-loc_font = nte_font_origin(LOC_FONT)
 chip_font = nte_font_origin(CHIP_FONT)
 sec_title_font = nte_font_origin(SEC_TITLE_FONT)
-furn_name_font = nte_font_origin(FURN_NAME_FONT)
 furn_lock_font = nte_font_origin(FURN_LOCK_FONT)
 
 
-def _load(path: Path, size: tuple[int, int] | None = None) -> Image.Image:
-    img = Image.open(path).convert("RGBA")
-    if size:
-        img = img.resize(size, Image.Resampling.LANCZOS)
-    return img
-
-
-PIN_ICON = _load(TEXTURE_PATH / "pin.png", (PIN_SIZE, PIN_SIZE))
-SEC_ICON = _load(TEXTURE_PATH / "sec_icon.png", (SEC_ICON_SIZE, SEC_ICON_SIZE))
-FURN_EMPTY_BG = _load(TEXTURE_PATH / "furniture_empty.png", (FURN_BG_SIZE, FURN_BG_SIZE))
-UNLOCK_MASK = _load(TEXTURE_PATH / "unlock_mask.png", (FURN_LOCK_SIZE, FURN_LOCK_SIZE))
-LOGO = Image.open(TEXTURE_PATH / "logo.png").convert("RGBA")
+PIN_ICON = open_texture(TEXTURE_PATH / "pin.png", (PIN_SIZE, PIN_SIZE))
+SEC_ICON = open_texture(TEXTURE_PATH / "sec_icon.png", (SEC_ICON_SIZE, SEC_ICON_SIZE))
+FURN_EMPTY_BG = open_texture(TEXTURE_PATH / "furniture_empty.png", (FURN_BG_SIZE, FURN_BG_SIZE))
+UNLOCK_MASK = open_texture(TEXTURE_PATH / "unlock_mask.png", (FURN_LOCK_SIZE, FURN_LOCK_SIZE))
+LOGO = open_texture(TEXTURE_PATH / "logo.png")
 LOGO_RESIZED = LOGO.resize((LOGO_W, round(LOGO_W * LOGO.height / LOGO.width)), Image.Resampling.LANCZOS)
 
 
@@ -113,15 +103,8 @@ class PreparedHouse:
     furnitures: list[tuple[Furniture, Image.Image | None]]
 
 
-async def _load_remote(loader, *args) -> Image.Image | None:
-    try:
-        return (await loader(*args)).convert("RGBA")
-    except OSError:
-        return None
-
-
 async def _prepare(house: House) -> PreparedHouse:
-    house_img = await _load_remote(get_realestate_img, house.id)
+    house_img = await get_realestate_img(house.id)
     char_avatars: list[Image.Image] = []
     if house.chars:
         try:
@@ -129,7 +112,7 @@ async def _prepare(house: House) -> PreparedHouse:
         except json.JSONDecodeError:
             char_ids = []
         for cid in char_ids:
-            img = await _load_remote(get_char_tall_img, str(cid))
+            img = await get_char_tall_img(str(cid))
             if img is not None:
                 fitted = ImageOps.fit(
                     img, (CHAR_AVATAR_SIZE, CHAR_AVATAR_SIZE), Image.Resampling.LANCZOS, centering=(0.5, 0.15)
@@ -137,7 +120,7 @@ async def _prepare(house: House) -> PreparedHouse:
                 char_avatars.append(fitted)
     furnitures: list[tuple[Furniture, Image.Image | None]] = []
     for f in house.fdetail:
-        img = await _load_remote(get_furniture_img, f.id) if f.own else None
+        img = await get_furniture_img(f.id) if f.own else None
         if img is not None:
             img = ImageOps.fit(img, (FURN_INNER_SIZE, FURN_INNER_SIZE), Image.Resampling.LANCZOS)
         furnitures.append((f, img))

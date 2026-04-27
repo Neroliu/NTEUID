@@ -10,9 +10,11 @@ from gsuid_core.utils.image.convert import convert_img
 from gsuid_core.utils.image.image_tools import get_event_avatar
 
 from ..utils.image import (
+    VW_SCALE as SCALE,
     COLOR_WHITE,
     add_footer,
     get_nte_bg,
+    open_texture,
     rounded_mask,
     make_nte_role_title,
 )
@@ -24,8 +26,6 @@ WIDTH = 1080
 FOOTER_RESERVE = 80
 
 TEXTURE_PATH = Path(__file__).parent / "texture2d" / "vehicle"
-
-SCALE = 1080 / 390
 PAGE_PAD_X = round(15 * SCALE)
 CONTENT_WIDTH = WIDTH - PAGE_PAD_X * 2
 
@@ -83,17 +83,9 @@ prop_label_font = nte_font_origin(PROP_LABEL_FONT)
 prop_value_font = nte_font_origin(PROP_VALUE_FONT)
 
 
-def _load(path: Path, size: tuple[int, int] | None = None) -> Image.Image:
-    img = Image.open(path).convert("RGBA")
-    if size:
-        img = img.resize(size, Image.Resampling.LANCZOS)
-    return img
-
-
-SEC_ICON = _load(TEXTURE_PATH / "improve_icon.png", (SEC_ICON_SIZE, SEC_ICON_SIZE))
-MODEL_BG = _load(TEXTURE_PATH / "model_bg.png", (MODEL_CELL_W, MODEL_CELL_H))
-RIGHT_TOP_LOGO = _load(TEXTURE_PATH / "right_top_logo.png")
-_LOGO = Image.open(TEXTURE_PATH / "bottom_logo.png").convert("RGBA")
+SEC_ICON = open_texture(TEXTURE_PATH / "improve_icon.png", (SEC_ICON_SIZE, SEC_ICON_SIZE))
+MODEL_BG = open_texture(TEXTURE_PATH / "model_bg.png", (MODEL_CELL_W, MODEL_CELL_H))
+_LOGO = open_texture(TEXTURE_PATH / "bottom_logo.png")
 LOGO = _LOGO.resize((LOGO_W, round(LOGO_W * _LOGO.height / _LOGO.width)), Image.Resampling.LANCZOS)
 
 
@@ -104,18 +96,11 @@ class PreparedVehicle:
     models: list[Image.Image | None]
 
 
-async def _load_remote(loader, *args) -> Image.Image | None:
-    try:
-        return (await loader(*args)).convert("RGBA")
-    except OSError:
-        return None
-
-
 async def _prepare(vehicle: Vehicle) -> PreparedVehicle:
-    image = await _load_remote(get_vehicle_wide_img, vehicle.id)
+    image = await get_vehicle_wide_img(vehicle.id)
     models: list[Image.Image | None] = []
     for m in vehicle.models:
-        models.append(await _load_remote(get_vehicle_model_img, m.type))
+        models.append(await get_vehicle_model_img(m.type))
     return PreparedVehicle(vehicle, image, models)
 
 

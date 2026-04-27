@@ -8,6 +8,7 @@ from PIL import Image, ImageOps, ImageDraw
 from gsuid_core.utils.image.convert import convert_img
 
 from ..utils.image import (
+    VW_SCALE as SCALE,
     COLOR_WHITE,
     COLOR_OVERLAY,
     COLOR_SUBTEXT,
@@ -31,8 +32,6 @@ HEADER_HEIGHT = 152
 FOOTER_RESERVE = 80  # 底部给 add_footer 留位（footer 贴底 20px + 自身高 47px + 余量）
 TEXTURE_PATH = Path(__file__).parent / "texture2d"
 
-# vw 系数：官方 design-width=390，本图渲染宽 1080；px = vw_v * (1080 / 390)
-SCALE = 1080 / 390
 SECTION_GAP = round(20 * SCALE)
 HEADER_IMAGE_GAP = round(10 * SCALE)
 TITLE_SUB_GAP = round(2 * SCALE)

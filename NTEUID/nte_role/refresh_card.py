@@ -24,13 +24,7 @@ REFRESH_TEX = Path(__file__).parent / "texture2d" / "refresh"
 
 
 async def _build_char_avatars(characters: list[CharacterDetail]) -> dict[str, Optional[Image.Image]]:
-    avatars: dict[str, Optional[Image.Image]] = {}
-    for ch in characters:
-        try:
-            avatars[ch.id] = await get_avatar_img(ch.id)
-        except OSError:
-            avatars[ch.id] = None
-    return avatars
+    return {ch.id: await get_avatar_img(ch.id) for ch in characters}
 
 
 async def draw_refresh_img(

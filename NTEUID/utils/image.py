@@ -48,10 +48,25 @@ DEFAULT_CARD_RADIUS = 22
 DEFAULT_LINE_GAP = 8
 DEFAULT_ELLIPSIS = "..."
 
+# 官方 webview design-width=390，渲染宽 1080；卡片模块共用的 vw 系数
+VW_SCALE = 1080 / 390
+
 _RICH_TAG_RE = re.compile(r"<[^>]+>")
 _RICH_BREAK_RE = re.compile(r"(?<![A-Za-z])rn(?![A-Za-z])")
 _SPACE_RE = re.compile(r"[ \t]+")
 _BLANK_LINE_RE = re.compile(r"\n{3,}")
+
+
+def vw(n: float) -> int:
+    return round(n * VW_SCALE)
+
+
+def open_texture(path: Path, size: Optional[Size] = None) -> Image.Image:
+    """打开本地贴图为 RGBA；提供 `size` 时按 LANCZOS 重采样。"""
+    img = Image.open(path).convert("RGBA")
+    if size:
+        img = img.resize(size, Image.Resampling.LANCZOS)
+    return img
 
 
 def cache_name(*parts: object, ext: str = "png") -> str:
@@ -113,15 +128,6 @@ def line_height(font: ImageFont.FreeTypeFont) -> int:
     return sum(font.getmetrics())
 
 
-def measure_text(
-    draw: ImageDraw.ImageDraw,
-    text: str,
-    font: ImageFont.FreeTypeFont,
-) -> Tuple[int, int]:
-    left, top, right, bottom = draw.textbbox((0, 0), text, font=font)
-    return int(right - left), int(bottom - top)
-
-
 def draw_card(
     draw: ImageDraw.ImageDraw,
     box: Box,
@@ -180,19 +186,6 @@ def text_block_height(
     if line_count <= 0:
         return 0
     return line_count * line_height(font) + max(0, line_count - 1) * line_gap
-
-
-def measure_text_block(
-    draw: ImageDraw.ImageDraw,
-    text: str,
-    font: ImageFont.FreeTypeFont,
-    max_width: int,
-    *,
-    line_gap: int = DEFAULT_LINE_GAP,
-    max_lines: Optional[int] = None,
-) -> Tuple[list[str], int]:
-    lines = wrap_text(draw, text, font, max_width, max_lines)
-    return lines, text_block_height(len(lines), font, line_gap=line_gap)
 
 
 def draw_text_block(
@@ -263,33 +256,6 @@ def clean_rich_text(text: str) -> str:
     raw = "\n".join(_SPACE_RE.sub(" ", line).strip() for line in raw.splitlines())
     raw = _BLANK_LINE_RE.sub("\n\n", raw)
     return raw.strip()
-
-
-def draw_page_header(
-    canvas: Image.Image,
-    title: str,
-    subtitle: str,
-    *,
-    height: int,
-    title_xy: Tuple[int, int],
-    subtitle_y: int,
-    title_font: ImageFont.FreeTypeFont,
-    subtitle_font: ImageFont.FreeTypeFont,
-    title_fill: Color = COLOR_WHITE,
-    subtitle_fill: Color = COLOR_SUBTEXT,
-    base_fill: Color = COLOR_NAVY,
-    bg_image: Optional[Image.Image] = None,
-) -> None:
-    width = canvas.width
-    if bg_image is None:
-        header = Image.new("RGBA", (width, height), base_fill)
-    else:
-        header = ImageOps.fit(bg_image.convert("RGBA"), (width, height), method=Image.Resampling.LANCZOS)
-    canvas.paste(header, (0, 0))
-    canvas.alpha_composite(Image.new("RGBA", (width, height), COLOR_OVERLAY), (0, 0))
-    draw = ImageDraw.Draw(canvas)
-    draw.text(title_xy, title, font=title_font, fill=title_fill)
-    draw.text((title_xy[0], subtitle_y), subtitle, font=subtitle_font, fill=subtitle_fill)
 
 
 class SmoothDrawer:

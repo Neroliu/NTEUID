@@ -7,7 +7,7 @@ from typing import Dict, List, Tuple, Optional
 from gsuid_core.logger import logger
 
 from ..utils.msgs import SignMsg
-from ..utils.session import ensure_tajiduo_client
+from ..utils.session import refresh_or_invalidate
 from ..utils.database import (
     SIGN_KIND_APP,
     SIGN_KIND_GAME,
@@ -51,11 +51,8 @@ async def sign_account(users: List[NTEUser]) -> str:
     primary = users[0]
     header = f"[账号 {primary.center_uid}]"
 
-    try:
-        client = await ensure_tajiduo_client(primary)
-    except TajiduoError as error:
-        await NTEUser.mark_invalid_by_cookie(primary.cookie, "refresh 失败")
-        logger.warning(f"[NTE签到] 账号 {primary.center_uid} 刷新失败: {error.message}")
+    client = await refresh_or_invalidate(primary, "签到")
+    if client is None:
         return f"{header}\n  · {SignMsg.login_expired()}"
 
     lines: List[str] = [header, f"  · {await _app_sign(client, primary.center_uid)}"]

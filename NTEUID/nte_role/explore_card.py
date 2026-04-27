@@ -10,6 +10,7 @@ from gsuid_core.utils.image.convert import convert_img
 from gsuid_core.utils.image.image_tools import get_event_avatar
 
 from ..utils.image import (
+    VW_SCALE as SCALE,
     add_footer,
     get_nte_bg,
     rounded_mask,
@@ -24,8 +25,6 @@ FOOTER_RESERVE = 80
 
 TEXTURE_PATH = Path(__file__).parent / "texture2d" / "explore"
 
-# vw 系数：官方 design-width=390，渲染宽 1080
-SCALE = 1080 / 390
 PAGE_PAD_X = round(15 * SCALE)
 CARD_PAD = round(5 * SCALE)
 CARD_GAP = round(15 * SCALE)
@@ -132,22 +131,19 @@ def _truncate(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.FreeTypeFont
 
 async def _load_area_banner(area_id: str, target_w: int) -> Image.Image:
     """area/wide 走 `w-full` 自适应：按目标宽度等比缩放。下载失败回退灰底，避免连累整张图渲染。"""
-    try:
-        image = await get_area_wide_img(area_id)
-    except OSError:
+    image = await get_area_wide_img(area_id)
+    if image is None:
         return Image.new("RGBA", (target_w, round(target_w * 248 / 684)), (180, 180, 180, 255))
-    image = image.convert("RGBA")
     new_h = round(image.height * target_w / image.width)
     return image.resize((target_w, new_h), Image.Resampling.LANCZOS)
 
 
 async def _load_sub_icon(type_id: str) -> Image.Image | None:
     """子项类型图标下载失败返回 None，由调用方跳过。"""
-    try:
-        image = await get_area_type_img(type_id)
-    except OSError:
+    image = await get_area_type_img(type_id)
+    if image is None:
         return None
-    return image.convert("RGBA").resize((SUB_TYPE_ICON, SUB_TYPE_ICON), Image.Resampling.LANCZOS)
+    return image.resize((SUB_TYPE_ICON, SUB_TYPE_ICON), Image.Resampling.LANCZOS)
 
 
 def _draw_progress_bar(canvas: Image.Image, xy: tuple[int, int], w: int, ratio: float) -> None:

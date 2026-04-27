@@ -5,12 +5,6 @@ import httpx
 from .cache import timed_async_cache
 
 
-def get_version() -> str:
-    from ..version import NTEUID_version
-
-    return NTEUID_version
-
-
 @timed_async_cache(86400)
 async def get_public_ip(host="127.127.127.127"):
     # 尝试从 kurobbs 获取 IP 地址

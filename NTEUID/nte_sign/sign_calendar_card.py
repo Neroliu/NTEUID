@@ -10,10 +10,12 @@ from gsuid_core.utils.image.convert import convert_img
 from gsuid_core.utils.image.image_tools import get_event_avatar
 
 from ..utils.image import (
+    VW_SCALE as SCALE,
     COLOR_WHITE,
     add_footer,
     cache_name,
     get_nte_bg,
+    open_texture,
     rounded_mask,
     make_nte_role_title,
     download_pic_from_url,
@@ -25,9 +27,6 @@ from ..utils.resource.RESOURCE_PATH import SIGN_CALENDAR_PATH
 
 WIDTH = 1180
 FOOTER_RESERVE = 80
-
-# 官方 webview design-width=390，渲染宽 1080；与 explore/realtime/realestate 保持一致
-SCALE = 1080 / 390
 
 # 网格容器（对应官方 `flex grid grid-cols-4 px-12p py-10p gap-x-14p gap-y-12p`）
 PANEL_RADIUS = round(12 * SCALE)
@@ -76,19 +75,15 @@ COLOR_DISCLAIMER = (112, 112, 112)
 TEXTURE_PATH = Path(__file__).parent / "texture2d" / "sign"
 
 
-def _load(name: str) -> Image.Image:
-    return Image.open(TEXTURE_PATH / name).convert("RGBA")
+CELL_ENABLE = open_texture(TEXTURE_PATH / "cell_enable.png", (CELL_W, CELL_H))
+CELL_DISABLE = open_texture(TEXTURE_PATH / "cell_disable.png", (CELL_W, CELL_H))
+CELL_DONE = open_texture(TEXTURE_PATH / "cell_done.png", (CELL_W, CELL_H))
 
-
-CELL_ENABLE = _load("cell_enable.png").resize((CELL_W, CELL_H), Image.Resampling.LANCZOS)
-CELL_DISABLE = _load("cell_disable.png").resize((CELL_W, CELL_H), Image.Resampling.LANCZOS)
-CELL_DONE = _load("cell_done.png").resize((CELL_W, CELL_H), Image.Resampling.LANCZOS)
-
-_SIGN_HEADER_RAW = _load("sign_header.png")
+_SIGN_HEADER_RAW = open_texture(TEXTURE_PATH / "sign_header.png")
 
 
 def _scaled(name: str, target_w: int) -> Image.Image:
-    raw = _load(name)
+    raw = open_texture(TEXTURE_PATH / name)
     new_h = round(raw.height * target_w / raw.width)
     return raw.resize((target_w, new_h), Image.Resampling.LANCZOS)
 

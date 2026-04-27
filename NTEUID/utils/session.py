@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from types import TracebackType
 from typing import Tuple, Optional
 from datetime import datetime
 
@@ -54,6 +55,17 @@ async def _pick_user(user_id: str, bot_id: str, game_id: str) -> Optional[NTEUse
     return next((u for u in targets if u.game_id == game_id), None)
 
 
+async def refresh_or_invalidate(user: NTEUser, tag: str) -> Optional[TajiduoClient]:
+    """`ensure_tajiduo_client` + refresh 失败兜底：mark_invalid + 警告日志，
+    返回 None 让调用方按 LOGIN_EXPIRED 提示用户。不发用户消息，交给调用方决定。"""
+    try:
+        return await ensure_tajiduo_client(user)
+    except TajiduoError as error:
+        await NTEUser.mark_invalid_by_cookie(user.cookie, "refresh 失败")
+        logger.warning(f"[NTE{tag}] 账号 {user.center_uid} 刷新失败: {error.message}")
+        return None
+
+
 async def open_session(
     bot: Bot,
     ev: Event,
@@ -69,11 +81,8 @@ async def open_session(
     if user is None:
         await send_nte_notify(bot, ev, not_logged_in_msg)
         return None
-    try:
-        client = await ensure_tajiduo_client(user)
-    except TajiduoError as error:
-        await NTEUser.mark_invalid_by_cookie(user.cookie, "refresh 失败")
-        logger.warning(f"[NTE{tag}] 账号 {user.center_uid} 刷新失败: {error.message}")
+    client = await refresh_or_invalidate(user, tag)
+    if client is None:
         await send_nte_notify(bot, ev, login_expired_msg)
         return None
     return user, client
@@ -99,3 +108,62 @@ async def report_call_error(
         return
     logger.warning(f"[NTE{tag}] 账号 {user.center_uid} 拉取失败: {error.message}")
     await send_nte_notify(bot, ev, load_failed_msg)
+
+
+class session_call:
+    """`open_session` + 业务调用 `TajiduoError` 兜底合一的 async cm。
+    `__aenter__` 返回 `None` 表示未登录或 refresh 失败（用户提示已发，body 直接 `return`）；
+    返回 `(user, client)` 时 body 内的 `TajiduoError` 由 `__aexit__` 走 report_call_error 分流并吞掉。"""
+
+    def __init__(
+        self,
+        bot: Bot,
+        ev: Event,
+        *,
+        tag: str,
+        not_logged_in_msg: str,
+        login_expired_msg: str,
+        load_failed_msg: str,
+        game_id: str = PRIMARY_GAME_ID,
+    ) -> None:
+        self._bot = bot
+        self._ev = ev
+        self._tag = tag
+        self._not_logged_in_msg = not_logged_in_msg
+        self._login_expired_msg = login_expired_msg
+        self._load_failed_msg = load_failed_msg
+        self._game_id = game_id
+        self._user: Optional[NTEUser] = None
+
+    async def __aenter__(self) -> Optional[Tuple[NTEUser, TajiduoClient]]:
+        session = await open_session(
+            self._bot,
+            self._ev,
+            tag=self._tag,
+            not_logged_in_msg=self._not_logged_in_msg,
+            login_expired_msg=self._login_expired_msg,
+            game_id=self._game_id,
+        )
+        if session is None:
+            return None
+        self._user, _ = session
+        return session
+
+    async def __aexit__(
+        self,
+        exc_type: Optional[type[BaseException]],
+        exc: Optional[BaseException],
+        tb: Optional[TracebackType],
+    ) -> bool:
+        if isinstance(exc, TajiduoError) and self._user is not None:
+            await report_call_error(
+                self._bot,
+                self._ev,
+                self._user,
+                exc,
+                tag=self._tag,
+                login_expired_msg=self._login_expired_msg,
+                load_failed_msg=self._load_failed_msg,
+            )
+            return True
+        return False

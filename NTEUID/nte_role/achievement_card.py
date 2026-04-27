@@ -9,8 +9,10 @@ from gsuid_core.utils.image.convert import convert_img
 from gsuid_core.utils.image.image_tools import get_event_avatar
 
 from ..utils.image import (
+    vw,
     add_footer,
     get_nte_bg,
+    open_texture,
     rounded_mask,
     make_nte_role_title,
 )
@@ -21,12 +23,6 @@ from ..utils.sdk.tajiduo_model import AchievementCategory, AchievementProgress
 WIDTH = 1080
 PADDING = 36
 FOOTER_RESERVE = 80
-
-SCALE = 1080 / 390
-
-
-def vw(n: float) -> int:
-    return round(n * SCALE)
 
 
 # 外面板：bg-#EFEFEF 与角色详情统一
@@ -49,7 +45,6 @@ UMD_GAP = vw(6)  # gap-x-vw-6
 
 # 类目项（gj）：item_bg.png 全宽，左 icon w-vw-64，名字 text-vw-18，右进度 text-vw-15
 ITEM_GAP = vw(14)  # mt-vw-14 列表起始
-ITEM_PAD_X = vw(8)  # mx-vw-8
 ITEM_PAD_Y = vw(8)  # mt-vw-8
 ITEM_ICON_W = vw(64)
 ITEM_ICON_LEFT = vw(6)  # ml-vw-6
@@ -67,28 +62,17 @@ COLOR_ITEM_TEXT = (35, 35, 35)  # #232323
 TEXTURE_PATH = Path(__file__).parent / "texture2d" / "achievement"
 
 
-def _load(name: str) -> Image.Image:
-    return Image.open(TEXTURE_PATH / name).convert("RGBA")
-
-
-HEADER_BG = _load("header_bg.png")
-ITEM_BG = _load("item_bg.png")
-UMD_GOLD = _load("umd_gold.png")
-UMD_SILVER = _load("umd_silver.png")
-UMD_COPPER = _load("umd_copper.png")
+HEADER_BG = open_texture(TEXTURE_PATH / "header_bg.png")
+ITEM_BG = open_texture(TEXTURE_PATH / "item_bg.png")
+UMD_GOLD = open_texture(TEXTURE_PATH / "umd_gold.png")
+UMD_SILVER = open_texture(TEXTURE_PATH / "umd_silver.png")
+UMD_COPPER = open_texture(TEXTURE_PATH / "umd_copper.png")
 
 head_num_font = nte_font_origin(HEADER_TEXT_FONT)
 head_label_font = nte_font_origin(HEADER_TEXT_LABEL_FONT)
 umd_num_font = nte_font_origin(UMD_NUM_FONT)
 item_name_font = nte_font_origin(ITEM_NAME_FONT)
 item_prog_font = nte_font_origin(ITEM_PROG_FONT)
-
-
-async def _safe(coro) -> Image.Image | None:
-    try:
-        return await coro
-    except OSError:
-        return None
 
 
 def _scaled(img: Image.Image, target_w: int) -> Image.Image:
@@ -183,7 +167,7 @@ async def _draw_item(
     bg_h = bg.height
     cy = y + bg_h // 2
 
-    icon = await _safe(get_achievement_img(item.id))
+    icon = await get_achievement_img(item.id)
     icon_x = x + ITEM_ICON_LEFT
     if icon is not None:
         icon_img = icon.convert("RGBA").resize((ITEM_ICON_W, ITEM_ICON_W), Image.Resampling.LANCZOS)
