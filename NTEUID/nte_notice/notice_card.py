@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 from PIL import Image, ImageOps, ImageDraw
 
@@ -19,8 +20,6 @@ from ..utils.image import (
     COLOR_WHITE,
     COLOR_ORANGE,
     COLOR_DIVIDER,
-    COLOR_OVERLAY,
-    COLOR_SUBTEXT,
     draw_card,
     wrap_text,
     cache_name,
@@ -29,7 +28,6 @@ from ..utils.image import (
     char_img_ring,
     draw_text_block,
     shrink_to_width,
-    get_nte_title_bg,
     download_pic_from_url,
 )
 from ..nte_config.prefix import nte_prefix
@@ -41,6 +39,8 @@ WIDTH = 1080
 PADDING = 36
 GRID_GAP = 24
 CARD_RADIUS = 22
+NOTICE_TEXTURE_PATH = Path(__file__).parent / "texture2d" / "notice"
+TITLE_HEIGHT = 338  # 1920x600 源图按宽度 1080 等比缩放后的自然高度
 
 
 def _get_column_color(name: str):
@@ -132,8 +132,6 @@ def _append_page(result_pages: list[Image.Image], page: Image.Image, bottom: int
 
 
 async def draw_notice_list_img(columns: dict[str, list[tuple[str, str, str, str]]]):
-    title_font = core_font(42)
-    sub_font = core_font(20)
     id_font = core_font(18)
     col_font = core_font(26)
     subject_font = core_font(24)
@@ -145,29 +143,35 @@ async def draw_notice_list_img(columns: dict[str, list[tuple[str, str, str, str]
     image_height = 148
     card_height = 272
 
+    col_name_y = TITLE_HEIGHT + 18
+    underline_top = col_name_y + 38
+    underline_bottom = col_name_y + 44
+    first_card_top = underline_bottom + 20
+
     max_rows = 4
-    header_height = 202
+    header_height = first_card_top - 32
     canvas_height = header_height + max_rows * card_height + (max_rows - 1) * GRID_GAP + 112 + PADDING
     canvas = Image.new("RGBA", (WIDTH, canvas_height), COLOR_BG)
     draw = ImageDraw.Draw(canvas)
 
-    canvas.paste(get_nte_title_bg(WIDTH, 152), (0, 0))
-    overlay = Image.new("RGBA", (WIDTH, 152), COLOR_OVERLAY)
-    canvas.alpha_composite(overlay, (0, 0))
+    title_src = Image.open(NOTICE_TEXTURE_PATH / "title_bg.png").convert("RGB")
+    title_bg = title_src.resize((WIDTH, TITLE_HEIGHT), Image.Resampling.LANCZOS)
+    canvas.paste(title_bg, (0, 0))
     draw = ImageDraw.Draw(canvas)
-    title_right = WIDTH - PADDING
-    draw.text((title_right, 34), "异环公告", font=title_font, fill=COLOR_WHITE, anchor="ra")
-    draw.text((title_right, 96), "资讯 / 活动 / 公告", font=sub_font, fill=COLOR_SUBTEXT, anchor="ra")
 
     column_names = ["资讯", "活动", "公告"]
     for col, column_name in enumerate(column_names):
         left = PADDING + col * (card_width + GRID_GAP)
-        draw.text((left, 170), column_name, font=col_font, fill=COLOR_TITLE)
-        draw.rounded_rectangle((left, 208, left + 72, 214), radius=4, fill=_get_column_color(column_name))
+        draw.text((left, col_name_y), column_name, font=col_font, fill=COLOR_TITLE)
+        draw.rounded_rectangle(
+            (left, underline_top, left + 72, underline_bottom),
+            radius=4,
+            fill=_get_column_color(column_name),
+        )
 
         for row, item in enumerate(columns.get(column_name, [])[:max_rows]):
             post_id, subject, time_text, preview_url = item
-            top = 234 + row * (card_height + GRID_GAP)
+            top = first_card_top + row * (card_height + GRID_GAP)
             right = left + card_width
             bottom = top + card_height
 
