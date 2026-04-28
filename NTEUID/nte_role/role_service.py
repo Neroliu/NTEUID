@@ -3,6 +3,7 @@ from __future__ import annotations
 from gsuid_core.bot import Bot
 from gsuid_core.models import Event
 
+from ..utils.at import AtTarget, resolve_at_target
 from .role_card import draw_role_card_img
 from .role_sort import diff_characters, sort_characters
 from .role_cache import load_role_characters_cache, save_role_characters_cache
@@ -20,15 +21,23 @@ from ..utils.name_convert import alias_to_char_name, char_name_to_char_id
 from ..utils.sdk.tajiduo_model import CharacterDetail
 
 
-async def run_role_home(bot: Bot, ev: Event) -> None:
-    async with SessionCall(
+def _session_call(bot: Bot, ev: Event, target: AtTarget, *, tag: str, load_failed_msg: str) -> SessionCall:
+    return SessionCall(
         bot,
         ev,
-        tag="角色面板",
-        not_logged_in_msg=RoleMsg.not_logged_in(),
-        login_expired_msg=RoleMsg.login_expired(),
-        load_failed_msg=RoleMsg.LOAD_FAILED,
-    ) as session:
+        tag=tag,
+        target_user_id=target.user_id,
+        not_logged_in_msg=RoleMsg.not_logged_in(target.is_other),
+        login_expired_msg=RoleMsg.login_expired(target.is_other),
+        load_failed_msg=load_failed_msg,
+    )
+
+
+async def run_role_home(bot: Bot, ev: Event) -> None:
+    target = await resolve_at_target(bot, ev)
+    if target is None:
+        return
+    async with _session_call(bot, ev, target, tag="角色面板", load_failed_msg=RoleMsg.LOAD_FAILED) as session:
         if session is None:
             return
         user, client = session
@@ -48,30 +57,30 @@ async def run_character_detail(bot: Bot, ev: Event, char_name: str) -> None:
     if not char_id:
         return await send_nte_notify(bot, ev, RoleMsg.CHAR_NOT_FOUND)
 
-    user = await NTEUser.get_active(ev.user_id, ev.bot_id)
+    target = await resolve_at_target(bot, ev)
+    if target is None:
+        return
+
+    user = await NTEUser.get_active(target.user_id, ev.bot_id)
     if user is None:
-        return await send_nte_notify(bot, ev, RoleMsg.not_logged_in())
+        return await send_nte_notify(bot, ev, RoleMsg.not_logged_in(target.is_other))
 
     characters = await load_role_characters_cache(user.uid)
     if not characters:
-        return await send_nte_notify(bot, ev, RoleMsg.LOCAL_EMPTY)
+        return await send_nte_notify(bot, ev, RoleMsg.OTHER_LOCAL_EMPTY if target.is_other else RoleMsg.LOCAL_EMPTY)
 
-    target = next((character for character in characters if character.id == char_id), None)
-    if target is None:
+    char = next((character for character in characters if character.id == char_id), None)
+    if char is None:
         return await send_nte_notify(bot, ev, RoleMsg.CHAR_NOT_FOUND)
 
-    await bot.send(await draw_character_card_img(ev, target, user.role_name, user.uid))
+    await bot.send(await draw_character_card_img(ev, char, user.role_name, user.uid))
 
 
 async def run_refresh_role_panel(bot: Bot, ev: Event) -> None:
-    async with SessionCall(
-        bot,
-        ev,
-        tag="刷新面板",
-        not_logged_in_msg=RoleMsg.not_logged_in(),
-        login_expired_msg=RoleMsg.login_expired(),
-        load_failed_msg=RoleMsg.REFRESH_FAILED,
-    ) as session:
+    target = await resolve_at_target(bot, ev)
+    if target is None:
+        return
+    async with _session_call(bot, ev, target, tag="刷新面板", load_failed_msg=RoleMsg.REFRESH_FAILED) as session:
         if session is None:
             return
         user, client = session
@@ -86,14 +95,10 @@ async def run_refresh_role_panel(bot: Bot, ev: Event) -> None:
 
 
 async def run_achievement(bot: Bot, ev: Event) -> None:
-    async with SessionCall(
-        bot,
-        ev,
-        tag="成就进度",
-        not_logged_in_msg=RoleMsg.not_logged_in(),
-        login_expired_msg=RoleMsg.login_expired(),
-        load_failed_msg=RoleMsg.LOAD_FAILED,
-    ) as session:
+    target = await resolve_at_target(bot, ev)
+    if target is None:
+        return
+    async with _session_call(bot, ev, target, tag="成就进度", load_failed_msg=RoleMsg.LOAD_FAILED) as session:
         if session is None:
             return
         user, client = session
@@ -104,14 +109,10 @@ async def run_achievement(bot: Bot, ev: Event) -> None:
 
 
 async def run_realestate(bot: Bot, ev: Event) -> None:
-    async with SessionCall(
-        bot,
-        ev,
-        tag="房产",
-        not_logged_in_msg=RoleMsg.not_logged_in(),
-        login_expired_msg=RoleMsg.login_expired(),
-        load_failed_msg=RoleMsg.LOAD_FAILED,
-    ) as session:
+    target = await resolve_at_target(bot, ev)
+    if target is None:
+        return
+    async with _session_call(bot, ev, target, tag="房产", load_failed_msg=RoleMsg.LOAD_FAILED) as session:
         if session is None:
             return
         user, client = session
@@ -122,14 +123,10 @@ async def run_realestate(bot: Bot, ev: Event) -> None:
 
 
 async def run_realtime(bot: Bot, ev: Event) -> None:
-    async with SessionCall(
-        bot,
-        ev,
-        tag="实时信息",
-        not_logged_in_msg=RoleMsg.not_logged_in(),
-        login_expired_msg=RoleMsg.login_expired(),
-        load_failed_msg=RoleMsg.LOAD_FAILED,
-    ) as session:
+    target = await resolve_at_target(bot, ev)
+    if target is None:
+        return
+    async with _session_call(bot, ev, target, tag="实时信息", load_failed_msg=RoleMsg.LOAD_FAILED) as session:
         if session is None:
             return
         user, client = session
@@ -138,14 +135,10 @@ async def run_realtime(bot: Bot, ev: Event) -> None:
 
 
 async def run_explore(bot: Bot, ev: Event) -> None:
-    async with SessionCall(
-        bot,
-        ev,
-        tag="探索详情",
-        not_logged_in_msg=RoleMsg.not_logged_in(),
-        login_expired_msg=RoleMsg.login_expired(),
-        load_failed_msg=RoleMsg.LOAD_FAILED,
-    ) as session:
+    target = await resolve_at_target(bot, ev)
+    if target is None:
+        return
+    async with _session_call(bot, ev, target, tag="探索详情", load_failed_msg=RoleMsg.LOAD_FAILED) as session:
         if session is None:
             return
         user, client = session
@@ -156,14 +149,10 @@ async def run_explore(bot: Bot, ev: Event) -> None:
 
 
 async def run_vehicles(bot: Bot, ev: Event) -> None:
-    async with SessionCall(
-        bot,
-        ev,
-        tag="载具",
-        not_logged_in_msg=RoleMsg.not_logged_in(),
-        login_expired_msg=RoleMsg.login_expired(),
-        load_failed_msg=RoleMsg.LOAD_FAILED,
-    ) as session:
+    target = await resolve_at_target(bot, ev)
+    if target is None:
+        return
+    async with _session_call(bot, ev, target, tag="载具", load_failed_msg=RoleMsg.LOAD_FAILED) as session:
         if session is None:
             return
         user, client = session

@@ -10,6 +10,7 @@ TITLE = "[异环]\n"
 class CommonMsg:
     NOT_LOGGED_IN = "尚未登录塔吉多账号"
     RETRY_LATER = "服务暂时不可用，请稍后再试"
+    AT_QUERY_DISABLED = "AT 查询功能未开启，无法查看他人信息"
 
     @classmethod
     def login_expired(cls) -> str:
@@ -81,13 +82,18 @@ class RoleMsg:
     REFRESH_FAILED = "角色面板刷新失败，请稍后再试"
     CHAR_NOT_FOUND = "未找到该角色（检查角色名）"
     EMPTY = "暂无可展示的数据"
+    OTHER_LOCAL_EMPTY = "对方暂无本地角色详情数据"
 
     @classmethod
-    def not_logged_in(cls) -> str:
+    def not_logged_in(cls, is_other: bool = False) -> str:
+        if is_other:
+            return "对方尚未登录塔吉多账号"
         return f"{CommonMsg.NOT_LOGGED_IN}，请先发送【{nte_prefix()}登录】"
 
     @classmethod
-    def login_expired(cls) -> str:
+    def login_expired(cls, is_other: bool = False) -> str:
+        if is_other:
+            return "对方登录已失效，无法查询"
         return CommonMsg.login_expired()
 
     @classmethod

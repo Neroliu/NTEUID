@@ -116,10 +116,14 @@ async def open_session(
     not_logged_in_msg: str,
     login_expired_msg: str,
     game_id: str = PRIMARY_GAME_ID,
+    target_user_id: str | None = None,
 ) -> tuple[NTEUser, TajiduoClient] | None:
     """选活跃账号 + refresh client。返回 `(user, client)` 或 `None`（消息已发，调用方直接 `return`）。
-    refresh 抛 `TajiduoError` 一律按 LOGIN_EXPIRED 处理（mark_invalid + 重登提示）。"""
-    user = await _pick_user(ev.user_id, ev.bot_id, game_id)
+    refresh 抛 `TajiduoError` 一律按 LOGIN_EXPIRED 处理（mark_invalid + 重登提示）。
+
+    `target_user_id` 用于 @ 查询场景：传入即按该 QQ 查活跃账号；不传走 `ev.user_id`（默认查发送者本人）。
+    """
+    user = await _pick_user(target_user_id or ev.user_id, ev.bot_id, game_id)
     if user is None:
         await send_nte_notify(bot, ev, not_logged_in_msg)
         return None
@@ -170,6 +174,7 @@ class SessionCall:
         login_expired_msg: str,
         load_failed_msg: str,
         game_id: str = PRIMARY_GAME_ID,
+        target_user_id: str | None = None,
     ) -> None:
         self._bot = bot
         self._ev = ev
@@ -178,6 +183,7 @@ class SessionCall:
         self._login_expired_msg = login_expired_msg
         self._load_failed_msg = load_failed_msg
         self._game_id = game_id
+        self._target_user_id = target_user_id
         self._user: NTEUser | None = None
 
     async def __aenter__(self) -> tuple[NTEUser, TajiduoClient] | None:
@@ -188,6 +194,7 @@ class SessionCall:
             not_logged_in_msg=self._not_logged_in_msg,
             login_expired_msg=self._login_expired_msg,
             game_id=self._game_id,
+            target_user_id=self._target_user_id,
         )
         if session is None:
             return None

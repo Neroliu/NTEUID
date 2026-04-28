@@ -139,4 +139,9 @@ CONFIG_DEFAULT: dict[str, GSC] = {
         "SDK 请求走的代理（http://host:port），为空则直连",
         "",
     ),
+    "NTEAllowAtQuery": GsBoolConfig(
+        "允许AT查询他人信息",
+        "开启后可通过 @他人 查询对方的角色面板等信息；关闭则统一只查自己",
+        True,
+    ),
 }
