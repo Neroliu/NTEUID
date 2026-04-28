@@ -16,6 +16,7 @@ from .sign_runner import (
 from .sign_calendar import run_sign_calendar
 from ..utils.database import NTEUser, NTESignRecord
 from ..utils.constants import GAME_ID_HUANTA, GAME_ID_YIHUAN
+from ..utils.game_registry import GAME_LABELS, disabled_sign_games
 from ..nte_config.nte_config import NTEConfig
 
 sv_nte_sign = SV("nte签到")
@@ -55,18 +56,23 @@ async def nte_all_sign(bot: Bot, ev: Event):
     await bot.send(result)
 
 
+def _format_auto_msg(header: str, changed: dict[str, int]) -> str:
+    if not changed:
+        return SignMsg.AUTO_NO_ACCOUNT
+    lines = [f"- {GAME_LABELS.get(gid, gid)}：{n} 个角色" for gid, n in changed.items()]
+    return f"{header}\n" + "\n".join(lines)
+
+
 @sv_nte_auto.on_fullmatch(("开启自动签到", "开启自动签"))
 async def nte_enable_auto(bot: Bot, ev: Event):
-    n = await NTEUser.set_auto_sign(ev.user_id, ev.bot_id, on=True)
-    msg = f"{SignMsg.AUTO_ENABLED}（{n} 个账号）" if n else SignMsg.AUTO_NO_ACCOUNT
-    await send_nte_notify(bot, ev, msg)
+    changed = await NTEUser.set_auto_sign(ev.user_id, ev.bot_id, on=True, exclude_game_ids=disabled_sign_games())
+    await send_nte_notify(bot, ev, _format_auto_msg(SignMsg.AUTO_ENABLED, changed))
 
 
 @sv_nte_auto.on_fullmatch(("关闭自动签到", "关闭自动签"))
 async def nte_disable_auto(bot: Bot, ev: Event):
-    n = await NTEUser.set_auto_sign(ev.user_id, ev.bot_id, on=False)
-    msg = f"{SignMsg.AUTO_DISABLED}（{n} 个账号）" if n else SignMsg.AUTO_NO_ACCOUNT
-    await send_nte_notify(bot, ev, msg)
+    changed = await NTEUser.set_auto_sign(ev.user_id, ev.bot_id, on=False)
+    await send_nte_notify(bot, ev, _format_auto_msg(SignMsg.AUTO_DISABLED, changed))
 
 
 @sv_nte_sign_calendar.on_fullmatch(("签到日历", "每日签到", "签到一览", "签到记录", "签到历史"))

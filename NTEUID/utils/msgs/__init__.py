@@ -60,7 +60,6 @@ class SignMsg:
     NO_SIGN_ACCOUNT = "无可签账号"
     ACCOUNT_BUSY = "正在签到中，请稍候"
     FAILED = "签到失败，稍后再试"
-    NO_ROLE = "未绑定角色，跳过游戏签到"
     AUTO_NO_ACCOUNT = CommonMsg.NOT_LOGGED_IN
     AUTO_ENABLED = "已开启自动签到"
     AUTO_DISABLED = "已关闭自动签到"

@@ -5,7 +5,7 @@ from typing import Any, TypeVar, cast
 from datetime import datetime
 
 from sqlmodel import Field, col, select
-from sqlalchemy import delete, update
+from sqlalchemy import func, delete, update
 from sqlalchemy.engine import CursorResult
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -244,16 +244,27 @@ class NTEUser(User, table=True):
         user_id: str,
         bot_id: str,
         on: bool,
-    ) -> int:
-        result = cast(
-            CursorResult,
-            await session.execute(
-                update(cls)
-                .where(col(cls.user_id) == user_id, col(cls.bot_id) == bot_id)
-                .values(auto_sign="on" if on else "off")
-            ),
-        )
-        return result.rowcount
+        *,
+        exclude_game_ids: set[str] | None = None,
+    ) -> dict[str, int]:
+        """切换 (user_id, bot_id) 下"有效签到行"（uid/cookie 非空、无 status）的 auto_sign。
+        `exclude_game_ids` 命中的行**不动**（用于跳过被关闭签到的游戏）。返回每个被改动游戏的行数。
+        """
+        conds = [
+            cls.user_id == user_id,
+            cls.bot_id == bot_id,
+            col(cls.uid) != "",
+            col(cls.cookie) != "",
+            (col(cls.status).is_(None)) | (col(cls.status) == ""),
+        ]
+        if exclude_game_ids:
+            conds.append(~col(cls.game_id).in_(exclude_game_ids))
+
+        count_result = await session.execute(select(cls.game_id, func.count()).where(*conds).group_by(cls.game_id))
+        changed: dict[str, int] = {row[0]: row[1] for row in count_result.all()}
+        if changed:
+            await session.execute(update(cls).where(*conds).values(auto_sign="on" if on else "off"))
+        return changed
 
     @classmethod
     @with_session

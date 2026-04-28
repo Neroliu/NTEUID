@@ -22,7 +22,7 @@ from ..utils.constants import (
     TAJIDUO_SIGNIN_COMMUNITY_ID,
 )
 from ..utils.sdk.tajiduo import TajiduoClient
-from ..utils.game_registry import GAME_SIGN_SWITCHES
+from ..utils.game_registry import GAME_LABELS, disabled_sign_games
 from ..nte_config.nte_config import NTEConfig
 from ..utils.sdk.tajiduo_model import (
     UserTask,
@@ -53,18 +53,11 @@ async def sign_account(users: list[NTEUser]) -> str:
         return f"{header}\n  · {SignMsg.login_expired()}"
 
     lines: list[str] = [header, f"  · {await _app_sign(client, primary.center_uid)}"]
-    disabled_games = {
-        gid
-        for gid, switch in GAME_SIGN_SWITCHES.items()
-        if switch is not None and not NTEConfig.get_config(switch).data
-    }
-    roles = [u for u in users if u.game_id not in disabled_games]
-
-    if roles:
-        for user in roles:
-            lines.append(f"  · {await _game_sign(client, user)}")
-    else:
-        lines.append(f"  · {SignMsg.NO_ROLE}")
+    disabled = disabled_sign_games()
+    for user in users:
+        if user.game_id in disabled:
+            continue
+        lines.append(f"  · {await _game_sign(client, user)}")
 
     if NTEConfig.get_config("NTETaskDaily").data:
         lines.extend(f"  · {line}" for line in await _daily_tasks(client, primary.center_uid))
@@ -98,7 +91,7 @@ async def _game_sign(client: TajiduoClient, user: NTEUser) -> str:
     """`/apihub/awapi/signin/state` 是账号级（不带 role_id），今日状态不能用来
     跳过单个角色的签到——只走本地 record 幂等 + POST 响应判定。
     """
-    label = f"{user.role_name} 游戏签到"
+    label = f"{user.role_name} {GAME_LABELS.get(user.game_id, '')}游戏签到"
     record_ref = f"{user.game_id}:{user.uid}"
     if await NTESignRecord.is_signed(record_ref, SIGN_KIND_GAME):
         return _fmt(label, STATUS_SKIP, "今日已签")
