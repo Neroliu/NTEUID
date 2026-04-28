@@ -186,7 +186,7 @@ async def _sign_locked(users: list[NTEUser]) -> SignAccountResult:
     if lock.locked():
         return SignAccountResult(
             center_uid=center_uid,
-            text=f"[账号 {center_uid}]\n  · {SignMsg.ACCOUNT_BUSY}",
+            text=f"[塔吉多账号 {center_uid}] · {SignMsg.ACCOUNT_BUSY}",
             status=AccountStatus.BUSY,
         )
     async with lock:

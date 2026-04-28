@@ -79,12 +79,12 @@ async def sign_account(users: list[NTEUser]) -> SignAccountResult:
     假设调用方已持有该 center_uid 的账号级锁，内部不再加锁。
     """
     primary = users[0]
-    header = f"[账号 {primary.center_uid}]"
+    header = f"[塔吉多账号 {primary.center_uid}]"
 
     if await _is_account_all_done(users):
         return SignAccountResult(
             center_uid=primary.center_uid,
-            text=f"{header}\n  · 今日已签",
+            text=f"{header} · 今日已签",
             status=AccountStatus.ALL_DONE,
         )
 
@@ -92,7 +92,7 @@ async def sign_account(users: list[NTEUser]) -> SignAccountResult:
     if client is None:
         return SignAccountResult(
             center_uid=primary.center_uid,
-            text=f"{header}\n  · {SignMsg.login_expired()}",
+            text=f"{header} · {SignMsg.login_expired()}",
             status=AccountStatus.AUTH_FAILED,
         )
 
