@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-from typing import List, Tuple, Optional
 from datetime import datetime
 from dataclasses import dataclass
 
@@ -13,6 +12,7 @@ from gsuid_core.models import Event
 from gsuid_core.segment import MessageSegment
 from gsuid_core.utils.cookie_manager.qrlogin import get_qrcode_base64
 
+from .transport import TransportError, build_transport
 from ..utils.msgs import LoginMsg, send_nte_notify
 from ..utils.cache import TimedCache
 from ..utils.utils import get_public_ip
@@ -25,16 +25,21 @@ from ..nte_config.nte_config import NTEConfig
 from ..utils.sdk.tajiduo_model import GameRoleList, TajiduoError
 from ..utils.resource.RESOURCE_PATH import QR_PATH
 
-LOGIN_CACHE: TimedCache = TimedCache(timeout=600, maxsize=32)
-LOGIN_WAIT_SECONDS = 600
+_MAX_LOGIN_TTL_S = 3600  # cache 容量上限；实际等待时长由 NTELoginTTL 决定
+LOGIN_CACHE: TimedCache = TimedCache(timeout=_MAX_LOGIN_TTL_S, maxsize=32)
+EXTERNAL_PENDING: TimedCache = TimedCache(timeout=_MAX_LOGIN_TTL_S, maxsize=128)
 LOGIN_POLL_INTERVAL = 2.0
+
+
+def _login_ttl_s() -> int:
+    return NTEConfig.get_config("NTELoginTTL").data
 
 
 @dataclass
 class LoginState:
     user_id: str
     bot_id: str
-    group_id: Optional[str]
+    group_id: str | None
     device: LaohuDevice
     status: str = "pending"  # pending | success | failed
     ok: bool = False
@@ -70,6 +75,17 @@ async def _login_page_url() -> str:
 
 
 async def request_login(bot: Bot, ev: Event) -> None:
+    transport_name = NTEConfig.get_config("NTELoginTransport").data.strip()
+    if transport_name in {"", "local"}:
+        return await _request_login_internal(bot, ev)
+    base_url = NTEConfig.get_config("NTELoginUrl").data.strip()
+    if not base_url:
+        logger.warning(f"[NTE登录] 接入方式为 {transport_name} 但 NTELoginUrl 未配置")
+        return await send_nte_notify(bot, ev, LoginMsg.USER_CENTER_LOGIN_FAILED)
+    await _request_login_external(bot, ev, base_url)
+
+
+async def _request_login_internal(bot: Bot, ev: Event) -> None:
     auth_token = _auth_token(ev.user_id)
     login_url = f"{await _login_page_url()}/nte/i/{auth_token}"
     await _send_login_link(bot, ev, login_url)
@@ -92,6 +108,50 @@ async def request_login(bot: Bot, ev: Event) -> None:
     if result is None:
         return await send_nte_notify(bot, ev, LoginMsg.timeout())
     await send_nte_notify(bot, ev, result.msg)
+
+
+async def _request_login_external(bot: Bot, ev: Event, base_url: str) -> None:
+    """外置登录：调 nte-login 服务建会话→发链接给用户→按配置 transport 等结果→
+    拿到 (laohu_token, laohu_user_id) 后复用 `login_by_laohu_token` 完成塔吉多 + 落库。"""
+    auth_token = _auth_token(ev.user_id)
+    transport = build_transport(base_url)
+
+    try:
+        page_url = await transport.start(
+            auth=auth_token,
+            user_id=ev.user_id,
+            bot_id=ev.bot_id,
+            group_id=ev.group_id,
+        )
+    except TransportError as err:
+        logger.warning(f"[NTE登录] 外置 start 失败 user_id={ev.user_id}: {err}")
+        return await send_nte_notify(bot, ev, LoginMsg.USER_CENTER_LOGIN_FAILED)
+
+    await _send_login_link(bot, ev, page_url)
+
+    # 已有进行中的 listen：仅重发链接，不另开监听（与 _request_login_internal 行为一致，
+    # 否则重复发 nte登录会让多个 listen 竞争同一会话，触发多次「登录失败」通知）
+    if EXTERNAL_PENDING.get(auth_token):
+        return
+    EXTERNAL_PENDING.set(auth_token, True)
+    try:
+        result = await transport.listen(auth_token)
+    except TransportError as err:
+        logger.warning(f"[NTE登录] 外置 listen 失败 user_id={ev.user_id}: {err}")
+        return await send_nte_notify(bot, ev, LoginMsg.USER_CENTER_LOGIN_FAILED)
+    finally:
+        EXTERNAL_PENDING.pop(auth_token)
+
+    if result is None or result.status == "expired":
+        return await send_nte_notify(bot, ev, LoginMsg.timeout())
+    if result.status != "success":
+        msg = result.msg if result.msg else LoginMsg.USER_CENTER_LOGIN_FAILED
+        return await send_nte_notify(bot, ev, msg)
+    if not result.laohu_token or not result.laohu_user_id:
+        logger.warning(f"[NTE登录] 外置返回成功但凭据为空 user_id={ev.user_id}")
+        return await send_nte_notify(bot, ev, LoginMsg.USER_CENTER_LOGIN_FAILED)
+
+    await login_by_laohu_token(bot, ev, result.laohu_token, result.laohu_user_id)
 
 
 async def login_by_laohu_token(bot: Bot, ev: Event, laohu_token: str, laohu_user_id: str) -> None:
@@ -135,7 +195,7 @@ def _auth_token(user_id: str) -> str:
 
 
 async def send_login_sms(auth_token: str, mobile: str) -> LoginResult:
-    state: Optional[LoginState] = LOGIN_CACHE.get(auth_token)
+    state: LoginState | None = LOGIN_CACHE.get(auth_token)
     if not state:
         return LoginResult.fail(LoginMsg.session_expired())
     await LaohuClient(LAOHU_APP_ID, LAOHU_APP_KEY, device=state.device).send_sms_code(mobile)
@@ -143,7 +203,7 @@ async def send_login_sms(auth_token: str, mobile: str) -> LoginResult:
 
 
 async def perform_login(auth_token: str, mobile: str, code: str) -> LoginResult:
-    state: Optional[LoginState] = LOGIN_CACHE.get(auth_token)
+    state: LoginState | None = LOGIN_CACHE.get(auth_token)
     if not state:
         return LoginResult.fail(LoginMsg.session_expired())
 
@@ -180,24 +240,24 @@ async def perform_login(auth_token: str, mobile: str, code: str) -> LoginResult:
     return LoginResult.success(msg=LoginMsg.TAJIDUO_SUCCESS)
 
 
-async def _collect_all_roles(tajiduo: TajiduoClient) -> List[Tuple[str, str, str]]:
+async def _collect_all_roles(tajiduo: TajiduoClient) -> list[tuple[str, str, str]]:
     """按注册表顺序把所有游戏的角色都拉一遍；塔吉多后端按 gameId 独立存储，
     互不覆盖。签到是否实际签某个游戏由签到编排层按开关决定，这里无条件全拉——
     开关拨动后不用重登/重刷就能立即生效。
     """
-    collected: List[Tuple[str, str, str]] = []
+    collected: list[tuple[str, str, str]] = []
     for game_id in GAME_SIGN_SWITCHES:
         collected.extend(await _collect_roles(tajiduo, game_id))
     return collected
 
 
-async def _collect_roles(tajiduo: TajiduoClient, game_id: str) -> List[Tuple[str, str, str]]:
+async def _collect_roles(tajiduo: TajiduoClient, game_id: str) -> list[tuple[str, str, str]]:
     """get_bind_role + get_game_roles 双路合并，按 roleId 去重，主绑定排第一。
 
     返回 (role_id, role_name, game_id) 三元组。game_id 由查询参数兜定——查的是什么游戏，
     落盘就是什么游戏，不依赖 API 返回体的 gameId 字段（存在性不稳定）。
     """
-    collected: List[Tuple[str, str, str]] = []
+    collected: list[tuple[str, str, str]] = []
     seen: set[str] = set()
 
     bind = await tajiduo.get_bind_role(game_id)
@@ -262,7 +322,7 @@ async def _send_login_link(bot: Bot, ev: Event, url: str) -> None:
         f"[异环] 您的id为【{ev.user_id}】",
         LoginMsg.LINK_COPY,
         f" {url}",
-        LoginMsg.LINK_TTL,
+        LoginMsg.link_ttl(),
     ]
     if forward and not private_onebot:
         await bot.send(MessageSegment.node(lines))
@@ -270,10 +330,11 @@ async def _send_login_link(bot: Bot, ev: Event, url: str) -> None:
         await bot.send("\n".join(lines), at_sender=at_sender)
 
 
-async def _wait(auth_token: str) -> Optional[LoginState]:
+async def _wait(auth_token: str) -> LoginState | None:
     waited = 0.0
-    while waited < LOGIN_WAIT_SECONDS:
-        state: Optional[LoginState] = LOGIN_CACHE.get(auth_token)
+    wait_s = _login_ttl_s()
+    while waited < wait_s:
+        state: LoginState | None = LOGIN_CACHE.get(auth_token)
         if not state:
             return None
         if state.status in {"success", "failed"}:
@@ -285,12 +346,12 @@ async def _wait(auth_token: str) -> Optional[LoginState]:
     return None
 
 
-async def refresh_all_user_tokens(user_id: str, bot_id: str) -> List[Tuple[str, bool, str]]:
+async def refresh_all_user_tokens(user_id: str, bot_id: str) -> list[tuple[str, bool, str]]:
     """按 center_uid 去重后，对每个账号各刷新一次 session。
     返回 [(center_uid, success, reason)]。reason 只在失败时有值。"""
     users = await NTEUser.list_latest_per_account(user_id, bot_id)
     logger.info(f"[NTE刷新令牌] user_id={user_id} bot_id={bot_id} 取到 {len(users)} 个账号")
-    results: List[Tuple[str, bool, str]] = []
+    results: list[tuple[str, bool, str]] = []
     for user in users:
         if not user.laohu_token or not user.laohu_user_id:
             results.append((user.center_uid, False, "登录信息不完整"))
@@ -352,7 +413,7 @@ async def refresh_user_token(user: NTEUser) -> bool:
 
 
 def mark_login_failed(auth_token: str, msg: str) -> None:
-    state: Optional[LoginState] = LOGIN_CACHE.get(auth_token)
+    state: LoginState | None = LOGIN_CACHE.get(auth_token)
     if not state:
         return
     state.status = "failed"

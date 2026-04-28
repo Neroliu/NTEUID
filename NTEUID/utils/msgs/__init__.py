@@ -2,6 +2,7 @@ from gsuid_core.bot import Bot
 from gsuid_core.models import Event
 
 from ...nte_config.prefix import nte_prefix
+from ...nte_config.nte_config import NTEConfig
 
 TITLE = "[异环]\n"
 
@@ -24,7 +25,6 @@ class LoginMsg:
     TAJIDUO_SUCCESS = "塔吉多登录成功"
     LINK_COPY = "请复制地址到浏览器打开"
     LINK_QR = "请扫描下方二维码获取登录地址，并复制地址到浏览器打开\n"
-    LINK_TTL = "登录地址10分钟内有效"
     MOBILE_INVALID = "手机号格式错误"
     CODE_INVALID = "验证码格式错误"
     SMS_SENT = "验证码已发送"
@@ -32,6 +32,13 @@ class LoginMsg:
     NOT_LOGGED_IN = "你还没有登录塔吉多账号"
     LOGOUT_DONE = "已退出登录，所有塔吉多账号已删除"
     REFRESH_NO_ACCOUNT = "你还没有登录塔吉多账号"
+
+    @classmethod
+    def link_ttl(cls) -> str:
+        ttl_s = NTEConfig.get_config("NTELoginTTL").data
+        if ttl_s >= 60 and ttl_s % 60 == 0:
+            return f"登录地址{ttl_s // 60}分钟内有效"
+        return f"登录地址{ttl_s}秒内有效"
 
     @classmethod
     def timeout(cls) -> str:

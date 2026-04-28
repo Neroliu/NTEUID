@@ -1,4 +1,4 @@
-from typing import Dict
+from __future__ import annotations
 
 from gsuid_core.utils.plugins_config.models import (
     GSC,
@@ -16,7 +16,7 @@ from ..utils.constants import (
     TASK_KEY_BROWSE_POST,
 )
 
-CONFIG_DEFAULT: Dict[str, GSC] = {
+CONFIG_DEFAULT: dict[str, GSC] = {
     "NTEAnnIds": GsListConfig(
         "推送公告ID",
         "异环公告推送ID列表",
@@ -35,8 +35,25 @@ CONFIG_DEFAULT: Dict[str, GSC] = {
     ),
     "NTELoginUrl": GsStrConfig(
         "异环登录页面URL",
-        "登录页对外域名；留空则用 Core 的 HOST/PORT 并自动探测公网 IP",
+        "local 模式：登录页对外域名，留空则用 Core 的 HOST/PORT 并自动探测公网 IP；外置模式：必填 nte-login 服务的 base URL",
         "",
+    ),
+    "NTELoginTransport": GsStrConfig(
+        "登录接入方式",
+        "local = Core 进程内嵌登录；http_poll / sse / ws = 走外置 nte-login 服务",
+        "local",
+        options=["local", "http_poll", "sse", "ws"],
+    ),
+    "NTELoginSecret": GsStrConfig(
+        "外置登录共享密钥",
+        "外置模式下与 nte-login 服务的 SHARED_SECRET 一致；HMAC 校验，留空则不签名",
+        "",
+    ),
+    "NTELoginTTL": GsIntConfig(
+        "登录会话存活秒数",
+        "用户收到链接后多久内必须完成登录；超时后通知「登录超时」并清理。最大 3600",
+        600,
+        max_value=3600,
     ),
     "NTETencentWord": GsBoolConfig(
         "登录链接用腾讯文档包装",
