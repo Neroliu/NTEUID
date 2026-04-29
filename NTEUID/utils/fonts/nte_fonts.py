@@ -5,10 +5,15 @@ from PIL import ImageFont
 from gsuid_core.utils.fonts.fonts import core_font
 
 EMOJI_ORIGIN_PATH = Path(__file__).parent / "NotoColorEmoji.ttf"
+NTE_ORIGIN_PATH = Path(__file__).parent / "nte_fonts.ttf"
 
 
 def nte_font_origin(size: int) -> ImageFont.FreeTypeFont:
     return core_font(size)
+
+
+def nte_font_bold(size: int) -> ImageFont.FreeTypeFont:
+    return ImageFont.truetype(str(NTE_ORIGIN_PATH), size=size)
 
 
 def emoji_font_origin(size: int) -> ImageFont.FreeTypeFont:
