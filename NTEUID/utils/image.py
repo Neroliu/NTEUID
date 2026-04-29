@@ -12,7 +12,7 @@ from PIL import Image, ImageOps, ImageDraw, ImageFont
 from gsuid_core.utils.image.image_tools import crop_center_img
 from gsuid_core.utils.download_resource.download_file import download
 
-from .fonts.nte_fonts import nte_font_30, nte_font_42, nte_font_50
+from .fonts.nte_fonts import nte_font_28, nte_font_42, nte_font_44
 from ..utils.resource.RESOURCE_PATH import QR_PATH
 
 ICON = Path(__file__).parent.parent.parent / "ICON.png"
@@ -347,7 +347,7 @@ def make_nte_role_title(
 ) -> Image.Image:
     """通用 QQ 头像 + 角色名 + UID (+ 等级) title，返回 1100×216 RGBA。"""
     uid_layer = Image.open(TEXT_PATH / "uid_bg.png").convert("RGBA")
-    ImageDraw.Draw(uid_layer).text((240, 145), f"UID {uid}", font=nte_font_30, fill=COLOR_DARK, anchor="lm")
+    ImageDraw.Draw(uid_layer).text((240, 145), f"UID {uid}", font=nte_font_28, fill=COLOR_DARK, anchor="lm")
 
     avatar_block = make_head_avatar(qq_avatar, size=216, avatar_size=198, frame_id=frame_id)
 
@@ -363,7 +363,7 @@ def make_nte_role_title(
 
     canvas.alpha_composite(uid_layer, (0, 8))
 
-    ImageDraw.Draw(canvas).text((240, 98), role_name, font=nte_font_50, fill=COLOR_WHITE, anchor="lm")
+    ImageDraw.Draw(canvas).text((240, 98), role_name, font=nte_font_44, fill=COLOR_WHITE, anchor="lm")
 
     canvas.alpha_composite(avatar_block, (0, 0))
 
