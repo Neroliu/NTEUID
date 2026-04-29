@@ -11,7 +11,6 @@ from gsuid_core.utils.image.image_tools import get_event_avatar
 from ..utils.image import (
     COLOR_WHITE,
     add_footer,
-    get_nte_bg,
     char_img_ring,
     make_nte_role_title,
 )
@@ -41,7 +40,8 @@ async def draw_refresh_img(
 
     rows = max(1, (len(characters) + 6) // 7)
     canvas_h = 246 + (rows - 1) * 290 + 340 + 90
-    canvas: Image.Image = get_nte_bg(1680, canvas_h).convert("RGBA")
+    canvas: Image.Image = Image.open(REFRESH_TEX / "bg.png").resize((1680, canvas_h)).convert("RGBA")
+    # canvas: Image.Image = get_nte_bg(1680, canvas_h).convert("RGBA")
 
     canvas.alpha_composite(title, (40, 30))
 
