@@ -119,11 +119,11 @@ async def _load_reward_icon(url: str) -> Image.Image | None:
 
 def _classify(day_index: int, state: GameSignState) -> str:
     """对齐官方 yh-signin webview：`signed = n < days`，`canSign = n == days && !todaySign`，其余 future。
-    `state.days` 是本月累计签到次数（不是月长），`state.day` 这里不参与逐格判定。"""
+    `state.days` 是本月累计签到次数（已签今日时已包含今日），`state.day` 这里不参与逐格判定。"""
     if day_index < state.days:
         return "signed"
-    if day_index == state.days:
-        return "signed" if state.today_sign else "today"
+    if day_index == state.days and not state.today_sign:
+        return "today"
     return "future"
 
 
