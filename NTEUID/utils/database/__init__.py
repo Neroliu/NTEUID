@@ -19,6 +19,7 @@ from ..game_registry import PRIMARY_GAME_ID
 exec_list.extend(
     [
         "ALTER TABLE NTEUser ADD COLUMN tap_id TEXT DEFAULT ''",
+        "ALTER TABLE NTEUser ADD COLUMN xhh_pkey TEXT DEFAULT ''",
     ]
 )
 
@@ -53,7 +54,8 @@ class NTEUser(User, table=True):
     auto_sign: str = Field(default="off", title="是否参与定时签到")
     access_token: str = Field(default="", title="accessToken 缓存")
     access_token_updated_at: datetime | None = Field(default=None, title="accessToken 更新时间")
-    tap_id: str = Field(default="", title="TapTap user_id（用于查抽卡海报）")
+    tap_id: str = Field(default="", title="TapTap user_id")
+    xhh_pkey: str = Field(default="", title="小黑盒 user_pkey")
     updated_at: datetime = Field(
         default_factory=datetime.now,
         sa_column_kwargs={"onupdate": datetime.now},
@@ -295,6 +297,28 @@ class NTEUser(User, table=True):
 
     @classmethod
     @with_session
+    async def delete_by_center_uid(
+        cls: type[T_NTEUser],
+        session: AsyncSession,
+        user_id: str,
+        bot_id: str,
+        center_uid: str,
+    ) -> int:
+        """删除指定用户下某个 center_uid 的所有角色行（单账号登出）。"""
+        result = cast(
+            CursorResult,
+            await session.execute(
+                delete(cls).where(
+                    col(cls.user_id) == user_id,
+                    col(cls.bot_id) == bot_id,
+                    col(cls.center_uid) == center_uid,
+                ),
+            ),
+        )
+        return result.rowcount
+
+    @classmethod
+    @with_session
     async def delete_all(
         cls: type[T_NTEUser],
         session: AsyncSession,
@@ -353,6 +377,25 @@ class NTEUser(User, table=True):
                 col(cls.game_id) == PRIMARY_GAME_ID,
             )
             .values(tap_id=tap_id, updated_at=datetime.now())
+        )
+        return cast(CursorResult, await session.execute(stmt)).rowcount
+
+    @classmethod
+    @with_session
+    async def set_xhh_bind(
+        cls: type[T_NTEUser],
+        session: AsyncSession,
+        center_uid: str,
+        pkey: str,
+    ) -> int:
+        """给指定塔吉多账号下"异环角色行"写小黑盒凭据。"""
+        stmt = (
+            update(cls)
+            .where(
+                col(cls.center_uid) == center_uid,
+                col(cls.game_id) == PRIMARY_GAME_ID,
+            )
+            .values(xhh_pkey=pkey, updated_at=datetime.now())
         )
         return cast(CursorResult, await session.execute(stmt)).rowcount
 

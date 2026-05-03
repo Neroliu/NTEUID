@@ -9,7 +9,7 @@ from PIL import Image, ImageDraw
 from gsuid_core.logger import logger
 from gsuid_core.utils.image.convert import convert_img
 
-from ..utils.image import get_nte_bg, get_smooth_drawer
+from ..utils.image import SmoothDrawer, get_nte_bg
 from ..utils.fonts.nte_fonts import emoji_font, nte_font_origin
 
 
@@ -119,7 +119,7 @@ async def draw_update_log_img() -> bytes | str:
         bg_y = base_y + 7
 
         rounded_bg = Image.new("RGBA", (bg_width, bg_height), (0, 0, 0, 0))
-        get_smooth_drawer().rounded_rectangle(
+        SmoothDrawer().rounded_rectangle(
             (0, 0, bg_width, bg_height),
             radius=15,
             fill=(128, 128, 128, 100),

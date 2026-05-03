@@ -55,3 +55,10 @@ TAPTAP_USER_AGENT: str = (
 )
 # 用户在 TapTap 战绩页未绑游戏角色时，引导文案给的"长啥样"参考链接
 TAPTAP_BIND_GUIDE_URL: str = "https://www.taptap.cn/poster/NIYXlFahOXHR"
+# TapTap 个人资料页，用于获取 user_id
+TAPTAP_PERSONAL_INFO_URL: str = "https://accounts.taptap.cn/personal-info"
+
+# 小黑盒
+XIAOHEIHE_BASE_URL: str = "https://api.xiaoheihe.cn"
+XIAOHEIHE_WEB_URL: str = "https://www.xiaoheihe.cn/"
+XIAOHEIHE_BIND_GUIDE_URL: str = "https://www.xiaoheihe.cn/game/nte/lottery_analysis"

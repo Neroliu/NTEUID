@@ -8,6 +8,7 @@ from gsuid_core.models import Event
 from gsuid_core.utils.image.convert import convert_img
 from gsuid_core.utils.image.image_tools import get_event_avatar
 
+from .gacha_model import NTEGachaSection, NTEGachaSummary
 from ..utils.image import (
     add_footer,
     get_nte_bg,
@@ -18,11 +19,13 @@ from ..utils.image import (
 )
 from ..utils.resource.cdn import get_avatar_img, get_weapon_img
 from ..utils.fonts.nte_fonts import nte_font_bold, nte_font_origin
-from ..utils.sdk.taptap_model import GachaSection, GachaSummary
 
 _TEX = Path(__file__).parent / "texture2d"
 _WHITE = (255, 255, 255)
 _SUB = (210, 215, 230)
+
+_BANNER_RANK = {"限定卡池": 0, "弧盘池": 1, "常驻卡池": 2}
+_COST_PER_PULL = 160
 
 
 def _grid(inner_w: int) -> tuple[int, int, int]:
@@ -67,7 +70,7 @@ def _draw_title_stats(canvas: Image.Image, title_y: int, total: int, ssr: int) -
     )
 
 
-def _draw_banner(canvas: Image.Image, xy: tuple[int, int], inner_w: int, section: GachaSection) -> None:
+def _draw_banner(canvas: Image.Image, xy: tuple[int, int], inner_w: int, section: NTEGachaSection) -> None:
     H, pad = 147, 24
     bg = ImageOps.fit(
         open_texture(_TEX / "banner_nte.png").convert("RGBA"), (inner_w, H), method=Image.Resampling.LANCZOS
@@ -83,7 +86,7 @@ def _draw_banner(canvas: Image.Image, xy: tuple[int, int], inner_w: int, section
     draw.text((cx + pad, sub_y), "本轮消耗", font=f_lbl, fill=_SUB, anchor="lt")
     draw.text(
         (cx + pad + draw.textlength("本轮消耗", font=f_lbl) + 9, sub_y - 2),
-        str(section.total_pull_count * 160),  # 异环单抽 160 寒铁
+        str(section.total_pull_count * _COST_PER_PULL),
         font=nte_font_bold(21),
         fill=_WHITE,
         anchor="lt",
@@ -106,7 +109,7 @@ def _draw_banner(canvas: Image.Image, xy: tuple[int, int], inner_w: int, section
 
 
 async def _draw_item(
-    canvas: Image.Image, xy: tuple[int, int], w: int, h: int, item_id: str, item_name: str, pull: int
+    canvas: Image.Image, xy: tuple[int, int], w: int, h: int, item_id: str, item_name: str, pity: int
 ) -> None:
     cell = open_texture(_TEX / "char_bg.png", size=(w, h)).convert("RGBA")
     if item_id.startswith("fork_"):
@@ -128,18 +131,18 @@ async def _draw_item(
     draw.text((w // 2, h * 292 // 340), name + suffix, font=f_name, fill=_WHITE, anchor="mm")
 
     f_pull = nte_font_bold(16)
-    pull_text = f"{pull}抽"
+    pull_text = f"{pity}抽"
     pw = int(draw.textlength(pull_text, font=f_pull)) + 21
     ph = 28
     px, py = w - pw - 15, h * 200 // 340
-    # TapTap dataPool color_map：≤30 欧 / ≤80 平稳 / 其余 非
-    color = (26, 191, 76) if pull <= 30 else (234, 129, 59) if pull <= 80 else (250, 58, 61)
+    # ≤30 欧 / ≤80 平稳 / 其余 非
+    color = (26, 191, 76) if pity <= 30 else (234, 129, 59) if pity <= 80 else (250, 58, 61)
     cell.paste(Image.new("RGBA", (pw, ph), (*color, 235)), (px, py), rounded_mask((pw, ph), ph // 2))
     draw.text((px + pw // 2, py + ph // 2), pull_text, font=f_pull, fill=_WHITE, anchor="mm")
     canvas.alpha_composite(cell, xy)
 
 
-async def _draw_section(canvas: Image.Image, top_y: int, inner_w: int, section: GachaSection) -> int:
+async def _draw_section(canvas: Image.Image, top_y: int, inner_w: int, section: NTEGachaSection) -> int:
     _draw_banner(canvas, (21, top_y), inner_w, section)
     items_top = top_y + 147
     items = sorted(section.items, key=lambda i: i.pull_time_ts, reverse=True)[:12]
@@ -147,14 +150,14 @@ async def _draw_section(canvas: Image.Image, top_y: int, inner_w: int, section: 
     for idx, item in enumerate(items):
         row, col = divmod(idx, 6)
         await _draw_item(
-            canvas, (21 + col * (w + 4), items_top + row * stride), w, h, item.item_id, item.item_name, item.item_count
+            canvas, (21 + col * (w + 4), items_top + row * stride), w, h, item.item_id, item.item_name, item.pity
         )
     return items_top + ((len(items) - 1) // 6) * stride + h
 
 
 async def draw_gacha_summary_img(
     ev: Event,
-    summary: GachaSummary,
+    summary: NTEGachaSummary,
     *,
     role_name: str,
     role_id: str,
@@ -162,8 +165,10 @@ async def draw_gacha_summary_img(
     inner_w = 1080 - 42
     _, h, stride = _grid(inner_w)
 
-    rank = {n: i for i, n in enumerate(("限定卡池", "弧盘池", "常驻卡池"))}
-    sections = sorted(summary.sections, key=lambda s: rank.get(s.banner_name, 99))
+    sections = sorted(
+        (s for s in summary.sections if s.ssr_count > 0),
+        key=lambda s: _BANNER_RANK.get(s.banner_name, 99),
+    )
 
     def section_h(n: int) -> int:
         return 147 + ((max(min(n, 12), 1) - 1) // 6) * stride + h

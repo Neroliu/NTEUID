@@ -39,7 +39,8 @@ class LoginMsg:
     SMS_SEND_FAILED = "验证码发送失败，请稍后再试"
     SMS_VERIFIED = "短信验证通过，请回到对话查看登录结果"
     NOT_LOGGED_IN = "你还没有登录塔吉多账号"
-    LOGOUT_DONE = "已退出登录，所有塔吉多账号已删除"
+    LOGOUT_DONE = "已退出登录，当前塔吉多账号已删除"
+    LOGOUT_ALL_DONE = "已退出登录，所有塔吉多账号已删除"
     REFRESH_NO_ACCOUNT = "你还没有登录塔吉多账号"
 
     @classmethod
@@ -163,12 +164,36 @@ class NoticeMsg:
     LOAD_FAILED = "公告暂时无法获取，请稍后再试"
 
 
+class XhhBindMsg:
+    INVALID_PKEY = "user_pkey 格式不正确，请检查是否完整复制"
+    PKEY_EXPIRED = "user_pkey 已失效，请重新登录小黑盒后获取"
+    NOT_BOUND = "该小黑盒账号未绑定异环角色，请先在小黑盒内完成绑定"
+    VERIFY_FAILED = "小黑盒数据验证失败，请检查凭据是否正确"
+    BIND_SUCCESS = "小黑盒绑定成功"
+    BIND_FAILED = "绑定失败，请检查凭据后重试"
+    BIND_ALREADY_SAME = "已绑定该小黑盒账号"
+    NOT_LOGGED_IN = LoginMsg.NOT_LOGGED_IN
+
+    @classmethod
+    def usage_bind(cls) -> str:
+        return f"用法：{nte_prefix()}绑定小黑盒 <user_pkey>，例如 {nte_prefix()}绑定小黑盒 abcdef..."
+
+    @classmethod
+    def bind_success(cls, role_name: str) -> str:
+        return f"绑定成功，角色【{role_name}】抽卡数据已可查询"
+
+    @classmethod
+    def bind_role_mismatch(cls, xhh_role_name: str, nte_role_name: str) -> str:
+        return f"小黑盒绑定角色【{xhh_role_name}】与当前角色【{nte_role_name}】不一致，\n请检查凭据是否正确"
+
+
 class GachaMsg:
     INVALID_TAP_ID = "TapTap user_id 必须是数字"
     TAPTAP_NOT_BOUND = f"该 TapTap 账号未绑定异环角色，\n请先完成绑定：{TAPTAP_BIND_GUIDE_URL}"
-    LOAD_FAILED = "TapTap 数据获取失败，请稍后再试"
+    LOAD_FAILED = "抽卡数据获取失败，请稍后再试"
     BIND_ALREADY_SAME = "已绑定该 TapTap 账号"
-    BIND_REPLACE_WARNING = "已绑定过 TapTap 账号，暂不支持换绑（TapTap 侧限制）"
+    XHH_NOT_BOUND = f"未绑定小黑盒账号，请发送【{nte_prefix()}绑定小黑盒】\n或【{nte_prefix()}绑定tap <tapid>】"
+    XHH_PKEY_EXPIRED = "小黑盒凭据已失效，请重新绑定"
 
     @classmethod
     def usage_bind(cls) -> str:
@@ -176,7 +201,7 @@ class GachaMsg:
 
     @classmethod
     def bind_required(cls) -> str:
-        return f"未绑定 TapTap 账号，请发送【{nte_prefix()}绑定tap <tapid>】"
+        return f"未绑定抽卡数据源，请发送【{nte_prefix()}绑定小黑盒】或【{nte_prefix()}绑定tap <tapid>】"
 
     @classmethod
     def bind_role_mismatch(cls, taptap_role_name: str, nte_role_name: str) -> str:
@@ -188,9 +213,9 @@ class GachaMsg:
 
     @classmethod
     def empty(cls, role_name: str) -> str:
-        return f"【{role_name}】暂无抽卡数据，\n请去 TapTap 刷新后再试"
+        return f"【{role_name}】暂无抽卡数据，\n请去数据源刷新后再试"
 
 
-async def send_nte_notify(bot: Bot, ev: Event, msg: str, need_at: bool = True):
+async def send_nte_notify(bot: Bot, ev: Event, msg: str, need_at: bool = True) -> None:
     at_sender = need_at and bool(ev.group_id)
-    return await bot.send(f"{TITLE}{msg}", at_sender=at_sender)
+    await bot.send(f"{TITLE}{msg}", at_sender=at_sender)

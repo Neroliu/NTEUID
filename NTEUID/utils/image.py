@@ -18,7 +18,7 @@ from ..utils.resource.RESOURCE_PATH import QR_PATH
 ICON = Path(__file__).parent.parent.parent / "ICON.png"
 TEXT_PATH = Path(__file__).parent / "texture2d"
 CARD_LONG_PATH = TEXT_PATH / "card_long"
-FRAME_PATH = TEXT_PATH / "frame"
+
 
 Color = tuple[int, int, int] | tuple[int, int, int, int]
 Box = tuple[int, int, int, int]  # (left, top, right, bottom)
@@ -312,10 +312,6 @@ class SmoothDrawer:
         return
 
 
-def get_smooth_drawer(scale: int = 4) -> SmoothDrawer:
-    return SmoothDrawer(scale=scale)
-
-
 def get_nte_bg(w: int, h: int, bg: str = "bg") -> Image.Image:
     img = Image.open(TEXT_PATH / f"{bg}.jpg").convert("RGBA")
     return crop_center_img(img, w, h)
@@ -375,7 +371,7 @@ def make_nte_role_title(
     return canvas
 
 
-def get_footer():
+def get_footer() -> Image.Image:
     return Image.open(TEXT_PATH / "footer.png")
 
 
@@ -384,8 +380,8 @@ def add_footer(
     w: int = 0,
     offset_y: int = 0,
     is_invert: bool = False,
-):
-    footer = Image.open(TEXT_PATH / "footer.png")
+) -> Image.Image:
+    footer = get_footer()
     if is_invert:
         r, g, b, a = footer.split()
         rgb_image = Image.merge("RGB", (r, g, b))

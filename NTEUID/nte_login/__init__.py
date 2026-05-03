@@ -2,13 +2,16 @@ import re
 
 from gsuid_core.sv import SV
 from gsuid_core.bot import Bot
+from gsuid_core.logger import logger
 from gsuid_core.models import Event
 
 from . import login_router
-from ..utils.msgs import LoginMsg, send_nte_notify
+from ..utils.msgs import LoginMsg, CommonMsg, send_nte_notify
 from .bind_service import view_bindings, switch_binding, get_laohu_tokens
 from .login_service import request_login, login_by_laohu_token, refresh_all_user_tokens
 from ..utils.database import NTEUser
+from ..nte_role.role_cache import get_role_cache_path
+from ..utils.game_registry import PRIMARY_GAME_ID
 
 _ = login_router  # 纯副作用 import：FastAPI 路由在模块加载时注册
 
@@ -36,10 +39,44 @@ async def nte_login_cmd(bot: Bot, ev: Event):
 
 @sv_nte_login.on_fullmatch(("退出登录", "登出", "logout"))
 async def nte_logout_cmd(bot: Bot, ev: Event):
+    user = await NTEUser.get_active(ev.user_id, ev.bot_id)
+    if user is None:
+        has_history = await NTEUser.has_logged_in_history(ev.user_id, ev.bot_id)
+        return await send_nte_notify(bot, ev, CommonMsg.not_logged_in(has_history=has_history))
+
+    # 只清理当前 center_uid 下异环角色的 uid
+    all_rows = await NTEUser.list_sign_targets_by_user(ev.user_id, ev.bot_id)
+    uids = [r.uid for r in all_rows if r.uid and r.center_uid == user.center_uid and r.game_id == PRIMARY_GAME_ID]
+
+    deleted = await NTEUser.delete_by_center_uid(ev.user_id, ev.bot_id, user.center_uid)
+    if not deleted:
+        return await send_nte_notify(bot, ev, LoginMsg.NOT_LOGGED_IN)
+
+    for uid in uids:
+        cache_path = get_role_cache_path(uid)
+        if cache_path.exists():
+            cache_path.unlink()
+            logger.info(f"[NTE登出] 删除角色缓存 {cache_path}")
+
+    await send_nte_notify(bot, ev, LoginMsg.LOGOUT_DONE)
+
+
+@sv_nte_login.on_fullmatch(("全部登出", "退出全部登录"))
+async def nte_logout_all_cmd(bot: Bot, ev: Event):
+    rows = await NTEUser.list_sign_targets_by_user(ev.user_id, ev.bot_id)
+    uids = [r.uid for r in rows if r.uid and r.game_id == PRIMARY_GAME_ID]
+
     deleted = await NTEUser.delete_all(ev.user_id, ev.bot_id)
     if not deleted:
         return await send_nte_notify(bot, ev, LoginMsg.NOT_LOGGED_IN)
-    await send_nte_notify(bot, ev, LoginMsg.LOGOUT_DONE)
+
+    for uid in uids:
+        cache_path = get_role_cache_path(uid)
+        if cache_path.exists():
+            cache_path.unlink()
+            logger.info(f"[NTE登出] 删除角色缓存 {cache_path}")
+
+    await send_nte_notify(bot, ev, LoginMsg.LOGOUT_ALL_DONE)
 
 
 @sv_nte_get_token.on_fullmatch(
