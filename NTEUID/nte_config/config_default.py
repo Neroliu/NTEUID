@@ -170,4 +170,9 @@ CONFIG_DEFAULT: dict[str, GSC] = {
         "开启后可通过 @他人 查询对方的角色面板等信息；关闭则统一只查自己",
         True,
     ),
+    "NTEGachaUnsafeQuery": GsBoolConfig(
+        "TapTap抽卡免校验查询",
+        "开启后【tap抽卡记录 <TapTap user_id>】指令可任意查询，不校验是否为本人绑定；",
+        False,
+    ),
 }

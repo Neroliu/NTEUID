@@ -1,6 +1,7 @@
 from gsuid_core.bot import Bot
 from gsuid_core.models import Event
 
+from ..constants import TAPTAP_BIND_GUIDE_URL
 from ...nte_config.prefix import nte_prefix
 from ...nte_config.nte_config import NTEConfig
 
@@ -16,6 +17,12 @@ class CommonMsg:
     def login_expired(cls) -> str:
         p = nte_prefix()
         return f"登录已失效，请先发送【{p}刷新令牌】尝试续签，失败后再【{p}登录】"
+
+    @classmethod
+    def not_logged_in(cls, *, has_history: bool = False) -> str:
+        if has_history:
+            return cls.login_expired()
+        return f"{cls.NOT_LOGGED_IN}，请先发送【{nte_prefix()}登录】"
 
 
 class LoginMsg:
@@ -69,10 +76,6 @@ class SignMsg:
     CALENDAR_EMPTY = "暂无签到奖励数据"
 
     @classmethod
-    def not_logged_in(cls) -> str:
-        return f"{CommonMsg.NOT_LOGGED_IN}，请先发送【{nte_prefix()}登录】"
-
-    @classmethod
     def login_expired(cls) -> str:
         return CommonMsg.login_expired()
 
@@ -86,9 +89,11 @@ class RoleMsg:
     OTHER_LOCAL_EMPTY = "对方暂无本地角色详情数据"
 
     @classmethod
-    def not_logged_in(cls, is_other: bool = False) -> str:
+    def not_logged_in(cls, is_other: bool = False, *, has_history: bool = False) -> str:
         if is_other:
-            return "对方尚未登录塔吉多账号"
+            return "对方登录已失效，无法查询" if has_history else "对方尚未登录塔吉多账号"
+        if has_history:
+            return CommonMsg.login_expired()
         return f"{CommonMsg.NOT_LOGGED_IN}，请先发送【{nte_prefix()}登录】"
 
     @classmethod
@@ -119,10 +124,6 @@ class BindMsg:
     ONLY_ONE_ACCOUNT = "当前仅绑定了 1 个塔吉多账号，无需切换"
     SWITCH_DONE = "已切换到塔吉多账号 {center_uid}"
     TOKEN_EMPTY = "未找到可用的塔吉多凭证"
-
-    @classmethod
-    def not_logged_in(cls) -> str:
-        return f"{CommonMsg.NOT_LOGGED_IN}，请先发送【{nte_prefix()}登录】"
 
     @classmethod
     def target_not_found(cls) -> str:
@@ -160,6 +161,34 @@ class NoticeMsg:
     EMPTY = "当前没有可用的公告内容"
     INVALID_POST_ID = "请输入正确的 postId"
     LOAD_FAILED = "公告暂时无法获取，请稍后再试"
+
+
+class GachaMsg:
+    INVALID_TAP_ID = "TapTap user_id 必须是数字"
+    TAPTAP_NOT_BOUND = f"该 TapTap 账号未绑定异环角色，\n请先完成绑定：{TAPTAP_BIND_GUIDE_URL}"
+    LOAD_FAILED = "TapTap 数据获取失败，请稍后再试"
+    BIND_ALREADY_SAME = "已绑定该 TapTap 账号"
+    BIND_REPLACE_WARNING = "已绑定过 TapTap 账号，暂不支持换绑（TapTap 侧限制）"
+
+    @classmethod
+    def usage_bind(cls) -> str:
+        return f"用法：{nte_prefix()}绑定tap <tapid>，例如 {nte_prefix()}绑定tap 12345"
+
+    @classmethod
+    def bind_required(cls) -> str:
+        return f"未绑定 TapTap 账号，请发送【{nte_prefix()}绑定tap <tapid>】"
+
+    @classmethod
+    def bind_role_mismatch(cls, taptap_role_name: str, nte_role_name: str) -> str:
+        return f"TapTap 绑定角色【{taptap_role_name}】与当前角色【{nte_role_name}】不一致，\n请检查 user_id 是否正确"
+
+    @classmethod
+    def bind_success(cls, role_name: str) -> str:
+        return f"绑定成功，角色【{role_name}】抽卡数据已可查询"
+
+    @classmethod
+    def empty(cls, role_name: str) -> str:
+        return f"【{role_name}】暂无抽卡数据，\n请去 TapTap 刷新后再试"
 
 
 async def send_nte_notify(bot: Bot, ev: Event, msg: str, need_at: bool = True):

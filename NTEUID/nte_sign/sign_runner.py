@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 from gsuid_core.logger import logger
 
-from ..utils.msgs import SignMsg
+from ..utils.msgs import SignMsg, CommonMsg
 from .sign_service import (
     STATUS_OK,
     STATUS_FAIL,
@@ -64,7 +64,8 @@ class _StatusCounter:
 async def run_user_sign(user_id: str, bot_id: str) -> str:
     users = await NTEUser.list_sign_targets_by_user(user_id, bot_id)
     if not users:
-        return SignMsg.not_logged_in()
+        has_history = await NTEUser.has_logged_in_history(user_id, bot_id)
+        return CommonMsg.not_logged_in(has_history=has_history)
     blocks = [(await _sign_locked(g)).text for g in _group_by_center(users)]
     return "\n".join(blocks) if len(blocks) == 1 else "\n---\n".join(blocks)
 

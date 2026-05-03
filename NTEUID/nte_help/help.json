@@ -216,6 +216,35 @@
             }
         ]
     },
+    "抽卡记录": {
+        "desc": "TapTap 抽卡数据（需先在 TapTap APP 绑定异环角色）",
+        "data": [
+            {
+                "name": "绑定tap",
+                "desc": "把自己的 TapTap user_id 绑定到当前异环账号；TapTap 内绑定的角色须与当前异环主角色一致",
+                "eg": "绑定tap 540592389",
+                "need_ck": true,
+                "need_sk": false,
+                "need_admin": false
+            },
+            {
+                "name": "抽卡记录",
+                "desc": "查询抽卡数据",
+                "eg": "抽卡记录",
+                "need_ck": true,
+                "need_sk": false,
+                "need_admin": false
+            },
+            {
+                "name": "抽卡帮助",
+                "desc": "查看抽卡记录的接入流程",
+                "eg": "抽卡帮助",
+                "need_ck": false,
+                "need_sk": false,
+                "need_admin": false
+            }
+        ]
+    },
     "公告订阅": {
         "desc": "异环官方公告群推送（仅群聊）",
         "data": [

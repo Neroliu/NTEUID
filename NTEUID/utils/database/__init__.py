@@ -10,9 +10,17 @@ from sqlalchemy.engine import CursorResult
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from gsuid_core.webconsole.mount_app import PageSchema, GsAdminModel, site
+from gsuid_core.utils.database.startup import exec_list
 from gsuid_core.utils.database.base_models import User, BaseIDModel, with_session
 
 from ..game_registry import PRIMARY_GAME_ID
+
+# 老库自动加列；core 在 on_core_start 时统一执行，已存在的列会静默失败。
+exec_list.extend(
+    [
+        "ALTER TABLE NTEUser ADD COLUMN tap_id TEXT DEFAULT ''",
+    ]
+)
 
 T_NTEUser = TypeVar("T_NTEUser", bound="NTEUser")
 T_NTESignRecord = TypeVar("T_NTESignRecord", bound="NTESignRecord")
@@ -45,6 +53,7 @@ class NTEUser(User, table=True):
     auto_sign: str = Field(default="off", title="是否参与定时签到")
     access_token: str = Field(default="", title="accessToken 缓存")
     access_token_updated_at: datetime | None = Field(default=None, title="accessToken 更新时间")
+    tap_id: str = Field(default="", title="TapTap user_id（用于查抽卡海报）")
     updated_at: datetime = Field(
         default_factory=datetime.now,
         sa_column_kwargs={"onupdate": datetime.now},
@@ -299,6 +308,53 @@ class NTEUser(User, table=True):
             ),
         )
         return result.rowcount
+
+    @classmethod
+    @with_session
+    async def has_logged_in_history(
+        cls: type[T_NTEUser],
+        session: AsyncSession,
+        user_id: str,
+        bot_id: str,
+    ) -> bool:
+        """是否曾经成功登录过任何塔吉多账号（cookie 非空），不论当前是否被标失效。
+
+        给 `not_logged_in` 文案分流用：True 表示业务层应建议先发【刷新令牌】尝试救活
+        失效的 refresh_token；False 表示从未登录，应直接发【登录】。
+        """
+        result = await session.execute(
+            select(cls)
+            .where(
+                cls.user_id == user_id,
+                cls.bot_id == bot_id,
+                col(cls.cookie) != "",
+            )
+            .limit(1)
+        )
+        return result.scalars().first() is not None
+
+    @classmethod
+    @with_session
+    async def set_tap_id(
+        cls: type[T_NTEUser],
+        session: AsyncSession,
+        center_uid: str,
+        tap_id: str,
+    ) -> int:
+        """给指定塔吉多账号下"异环角色行"写 tap_id。
+
+        TapTap 战绩 API 按 app_id 区分（异环 = 714119），同账号下的幻塔角色行不
+        共用这个 tap_id，所以只在 `game_id == PRIMARY_GAME_ID` 的行上写。
+        """
+        stmt = (
+            update(cls)
+            .where(
+                col(cls.center_uid) == center_uid,
+                col(cls.game_id) == PRIMARY_GAME_ID,
+            )
+            .values(tap_id=tap_id, updated_at=datetime.now())
+        )
+        return cast(CursorResult, await session.execute(stmt)).rowcount
 
     @classmethod
     @with_session

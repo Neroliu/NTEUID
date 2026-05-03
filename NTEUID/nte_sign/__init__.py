@@ -7,7 +7,7 @@ from gsuid_core.logger import logger
 from gsuid_core.models import Event
 
 from .sign_push import push_sign_reports
-from ..utils.msgs import SignMsg, send_nte_notify
+from ..utils.msgs import SignMsg, CommonMsg, send_nte_notify
 from .sign_runner import (
     run_all_sign,
     run_user_sign,
@@ -79,7 +79,8 @@ async def nte_enable_auto(bot: Bot, ev: Event):
         logger.info("[NTE签到] 定时签到总开关已关闭")
         return await send_nte_notify(bot, ev, SignMsg.AUTO_DAILY_DISABLED)
     if not await NTEUser.list_sign_targets_by_user(ev.user_id, ev.bot_id):
-        return await send_nte_notify(bot, ev, SignMsg.not_logged_in())
+        has_history = await NTEUser.has_logged_in_history(ev.user_id, ev.bot_id)
+        return await send_nte_notify(bot, ev, CommonMsg.not_logged_in(has_history=has_history))
     changed = await NTEUser.set_auto_sign(
         ev.user_id,
         ev.bot_id,

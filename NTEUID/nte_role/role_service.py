@@ -63,7 +63,8 @@ async def run_character_detail(bot: Bot, ev: Event, char_name: str) -> None:
 
     user = await NTEUser.get_active(target.user_id, ev.bot_id)
     if user is None:
-        return await send_nte_notify(bot, ev, RoleMsg.not_logged_in(target.is_other))
+        has_history = await NTEUser.has_logged_in_history(target.user_id, ev.bot_id)
+        return await send_nte_notify(bot, ev, RoleMsg.not_logged_in(target.is_other, has_history=has_history))
 
     characters = await load_role_characters_cache(user.uid)
     if not characters:

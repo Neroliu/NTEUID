@@ -43,3 +43,15 @@ COMMAND_NAME_PATTERN: str = (
     r"\U00002B00-\U00002BFF\U00003200-\U000032FF"
     r"-—·()（）]{1,20}"
 )
+
+# TapTap 战绩 / 抽卡海报接口（匿名 GET，用于查 TapTap 用户分享出来的异环抽卡数据）
+TAPTAP_BASE_URL: str = "https://www.taptap.cn"
+TAPTAP_GAME_RECORD_PATH: str = "/webapiv2/game-record/v1"
+TAPTAP_APP_ID_YIHUAN: str = "714119"
+# 任意 UUID，TapTap 不校验内容只校验有值；写死即可
+TAPTAP_DEFAULT_DEVICE_UID: str = "ff836e35-ed0e-4140-915b-5ef00f39b35b"
+TAPTAP_USER_AGENT: str = (
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+)
+# 用户在 TapTap 战绩页未绑游戏角色时，引导文案给的"长啥样"参考链接
+TAPTAP_BIND_GUIDE_URL: str = "https://www.taptap.cn/poster/NIYXlFahOXHR"

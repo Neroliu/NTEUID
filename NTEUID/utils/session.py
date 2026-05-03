@@ -123,9 +123,12 @@ async def open_session(
 
     `target_user_id` 用于 @ 查询场景：传入即按该 QQ 查活跃账号；不传走 `ev.user_id`（默认查发送者本人）。
     """
-    user = await _pick_user(target_user_id or ev.user_id, ev.bot_id, game_id)
+    target = target_user_id or ev.user_id
+    user = await _pick_user(target, ev.bot_id, game_id)
     if user is None:
-        await send_nte_notify(bot, ev, not_logged_in_msg)
+        # 区分"完全没登过"vs"登过但被 mark_invalid"——后者应建议先刷新令牌而不是重新登录。
+        has_history = await NTEUser.has_logged_in_history(target, ev.bot_id)
+        await send_nte_notify(bot, ev, login_expired_msg if has_history else not_logged_in_msg)
         return None
     client = await refresh_or_invalidate(user, tag)
     if client is None:

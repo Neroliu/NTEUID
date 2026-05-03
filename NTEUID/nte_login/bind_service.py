@@ -5,7 +5,7 @@ from datetime import timedelta
 from gsuid_core.bot import Bot
 from gsuid_core.models import Event
 
-from ..utils.msgs import BindMsg, send_nte_notify
+from ..utils.msgs import BindMsg, CommonMsg, send_nte_notify
 from ..utils.database import NTEUser
 from ..utils.game_registry import GAME_LABELS
 
@@ -13,7 +13,8 @@ from ..utils.game_registry import GAME_LABELS
 async def view_bindings(bot: Bot, ev: Event) -> None:
     rows = await NTEUser.list_sign_targets_by_user(ev.user_id, ev.bot_id)
     if not rows:
-        return await send_nte_notify(bot, ev, BindMsg.not_logged_in())
+        has_history = await NTEUser.has_logged_in_history(ev.user_id, ev.bot_id)
+        return await send_nte_notify(bot, ev, CommonMsg.not_logged_in(has_history=has_history))
 
     grouped: dict[str, list[NTEUser]] = {}
     for row in rows:
@@ -29,7 +30,7 @@ async def view_bindings(bot: Bot, ev: Event) -> None:
 async def switch_binding(bot: Bot, ev: Event, target: str) -> None:
     accounts = await NTEUser.list_latest_per_account(ev.user_id, ev.bot_id)
     if len(accounts) < 2:
-        msg = BindMsg.not_logged_in() if not accounts else BindMsg.ONLY_ONE_ACCOUNT
+        msg = CommonMsg.not_logged_in() if not accounts else BindMsg.ONLY_ONE_ACCOUNT
         return await send_nte_notify(bot, ev, msg)
 
     center_uid = _resolve_target(target, accounts)
@@ -51,7 +52,7 @@ async def switch_binding(bot: Bot, ev: Event, target: str) -> None:
 async def get_laohu_tokens(bot: Bot, ev: Event) -> None:
     accounts = await NTEUser.list_latest_per_account(ev.user_id, ev.bot_id)
     if not accounts:
-        return await send_nte_notify(bot, ev, BindMsg.not_logged_in())
+        return await send_nte_notify(bot, ev, CommonMsg.not_logged_in())
 
     lines: list[str] = []
     for a in accounts:
