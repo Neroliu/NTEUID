@@ -37,8 +37,9 @@ def tap_to_nte(summary: TaptapGachaSummary) -> NTEGachaSummary:
                 NTEGachaItem(
                     item_id=item.item_id,
                     item_name=item.item_name,
-                    # TapTap 不提供单 item 保底差值，用 section 平均值兜底
-                    pity=sec.avg_pity,
+                    # TapTap gacha-record-summary 接口中 item_count
+                    # 实际表示该次 S 命中的具体抽数（pity）
+                    pity=item.item_count,
                     pull_time_ts=item.pull_time_ts,
                 )
                 for item in sec.items

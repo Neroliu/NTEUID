@@ -51,7 +51,7 @@ class GachaSSRItem(_TaptapModel):
     item_name: str = Field(description="物品名")
     item_icon: str = Field(description="缩略图 ID（与 item_id 一致）")
     item_rarity: str = Field(description="稀有度：S/A/B")
-    item_count: int = Field(description="本池抽到该物品累计次数（不是命座）")
+    item_count: int = Field(description="该次 S 命中的具体抽数（即保底差值 / pity）")
     pull_time_ts: int = Field(alias="pull_time", description="最近一次抽中 unix 秒")
 
 
