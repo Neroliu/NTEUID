@@ -16,15 +16,16 @@ from .transport import TransportError, build_transport
 from ..utils.msgs import LoginMsg, send_nte_notify
 from ..utils.cache import TimedCache
 from ..utils.utils import get_public_ip
+from ..utils.session import is_auth_error
 from ..utils.database import NTEUser
 from ..utils.constants import LAOHU_APP_ID, LAOHU_APP_KEY
-from ..utils.sdk.laohu import LaohuClient, LaohuDevice
+from ..utils.sdk.laohu import LaohuClient, LaohuDevice, make_device_id
 from ..utils.background import create_background_task
 from ..utils.sdk.tajiduo import TajiduoClient
 from ..nte_role.role_cache import save_role_characters_cache
 from ..utils.game_registry import PRIMARY_GAME_ID, GAME_SIGN_SWITCHES
 from ..nte_config.nte_config import NTEConfig
-from ..utils.sdk.tajiduo_model import GameRoleList, TajiduoError, TajiduoSession
+from ..utils.sdk.tajiduo_model import GameRoleList, TajiduoError, GameRecordCard, TajiduoSession
 from ..utils.resource.RESOURCE_PATH import QR_PATH
 
 _MAX_LOGIN_TTL_S = 3600  # cache 容量上限；实际等待时长由 NTELoginTTL 决定
@@ -36,7 +37,6 @@ LOGIN_POLL_INTERVAL = 2.0
 @dataclass(frozen=True)
 class LoginExchange:
     tajiduo: TajiduoClient
-    tj_session: TajiduoSession
     roles: list[tuple[str, str, str]]
 
 
@@ -127,7 +127,7 @@ async def _exchange_and_persist(
     logger.info(
         f"[NTE登录] user_id={user_id} center_uid={tj_session.center_uid} roles={[rid for rid, _, _ in roles]} 登录完成"
     )
-    return LoginExchange(tajiduo=tajiduo, tj_session=tj_session, roles=roles)
+    return LoginExchange(tajiduo=tajiduo, roles=roles)
 
 
 async def _persist_login_session(
@@ -155,10 +155,93 @@ async def _persist_login_session(
     )
 
 
+async def login_by_access_token(bot: Bot, ev: Event, access_token: str) -> None:
+    access_token = access_token.strip()
+    if not access_token:
+        await send_nte_notify(bot, ev, LoginMsg.USER_CENTER_LOGIN_FAILED)
+        return
+
+    dev_code = make_device_id()
+    tajiduo = TajiduoClient(device_id=dev_code, access_token=access_token)
+
+    try:
+        info = await tajiduo.get_user_full_info()
+    except TajiduoError as error:
+        logger.warning(f"[NTE登录] accessToken 验证失败 user_id={ev.user_id}: {error.message}")
+        await send_nte_notify(bot, ev, LoginMsg.USER_CENTER_LOGIN_FAILED)
+        return
+
+    center_uid = info.center_uid
+    if not center_uid:
+        logger.warning(f"[NTE登录] accessToken 用户资料缺少 center_uid user_id={ev.user_id}")
+        await send_nte_notify(bot, ev, LoginMsg.USER_CENTER_LOGIN_FAILED)
+        return
+    tajiduo.center_uid = center_uid
+
+    try:
+        roles = await _collect_access_token_roles(tajiduo)
+    except TajiduoError as error:
+        logger.warning(f"[NTE登录] accessToken 登录失败 user_id={ev.user_id}: {error.message}")
+        await send_nte_notify(bot, ev, LoginMsg.USER_CENTER_LOGIN_FAILED)
+        return
+
+    await NTEUser.upsert_access_token_account(
+        user_id=ev.user_id,
+        bot_id=ev.bot_id,
+        center_uid=center_uid,
+        access_token=access_token,
+        dev_code=dev_code,
+        entries=roles,
+    )
+    logger.info(f"[NTE登录] user_id={ev.user_id} center_uid={center_uid} accessToken 登录完成 roles={roles}")
+    await send_nte_notify(bot, ev, LoginMsg.TAJIDUO_SUCCESS if roles else LoginMsg.ACCESS_TOKEN_SHELL_SUCCESS)
+    if roles:
+        await _post_login_actions(bot, ev, LoginExchange(tajiduo=tajiduo, roles=roles))
+
+
 async def _collect_all_roles(tajiduo: TajiduoClient) -> list[tuple[str, str, str]]:
     collected: list[tuple[str, str, str]] = []
     for game_id in GAME_SIGN_SWITCHES:
         collected.extend(await _collect_roles(tajiduo, game_id))
+    return collected
+
+
+async def _collect_access_token_roles(tajiduo: TajiduoClient) -> list[tuple[str, str, str]]:
+    try:
+        roles = await _collect_all_roles(tajiduo)
+    except TajiduoError as error:
+        if is_auth_error(error):
+            raise
+        logger.warning(f"[NTE登录] accessToken 自动同步角色失败: {error.message}")
+    else:
+        if roles:
+            return roles
+
+    try:
+        return _collect_roles_from_record_cards(await tajiduo.get_game_record_card())
+    except TajiduoError as error:
+        if is_auth_error(error):
+            raise
+        logger.warning(f"[NTE登录] accessToken 自动同步战绩卡失败: {error.message}")
+        return []
+
+
+def _collect_roles_from_record_cards(cards: list[GameRecordCard]) -> list[tuple[str, str, str]]:
+    collected: list[tuple[str, str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for card in cards:
+        game_id = str(card.game_id)
+        if game_id not in GAME_SIGN_SWITCHES:
+            continue
+        role = card.bind_role_info
+        if role is None or not role.role_id:
+            continue
+        uid = str(role.role_id)
+        key = (game_id, uid)
+        if key in seen:
+            continue
+        seen.add(key)
+        collected.append((uid, role.role_name.strip(), game_id))
     return collected
 
 
@@ -348,7 +431,7 @@ async def login_by_laohu_token(
 ) -> None:
     """三条登录流的汇合点：原子 + 通知用户 + post-login 副作用。"""
     if dev_code is None:
-        dev_code = LaohuDevice().device_id
+        dev_code = make_device_id()
     outcome = await _exchange_and_persist(
         user_id=ev.user_id,
         bot_id=ev.bot_id,
@@ -426,7 +509,8 @@ async def refresh_all_user_tokens(user_id: str, bot_id: str) -> list[tuple[str, 
     results: list[tuple[str, bool, str]] = []
     for user in users:
         if not user.laohu_token or not user.laohu_user_id:
-            results.append((user.center_uid, False, "登录信息不完整"))
+            reason = "accessToken 登录无法续签" if user.access_token and not user.cookie else "登录信息不完整"
+            results.append((user.center_uid, False, reason))
             continue
         ok = await refresh_user_token(user)
         results.append((user.center_uid, ok, "" if ok else "凭证已失效"))

@@ -17,6 +17,7 @@ from .sdk.tajiduo_model import TajiduoError
 
 # 塔吉多业务接口在 session 被顶下/失效时返回 401/402/403；HTTP 状态在 SDK 层落到 `error.raw`
 _AUTH_STATUSES = {401, 402, 403}
+_AUTH_STATUS_CODES = {str(item) for item in _AUTH_STATUSES}
 
 # 同 center_uid 并发 refresh 的 single-flight 表：首笔真跑、落库，后到的协程 await 同一 future。
 # TTL 内的缓存命中不进这张表；只有真要打网络的才有竞争。
@@ -35,14 +36,15 @@ async def ensure_tajiduo_client(user: NTEUser) -> TajiduoClient:
     single-flight 合并：第一笔真跑，后到协程复用同一 future 的结果，
     避免第二笔拿旧 refresh_token 撞 401/402 把账号误标失效。
 
-    注意：`TajiduoClient.from_user` 只带 refresh_token，本函数会按需把 access_token
-    回写到 client 实例字段（缓存路径直接 mutate；refresh 路径用 single-flight 拿到的
-    最新 token 回写）——这是与 `from_user` 配对使用的约定。
+    注意：`TajiduoClient.from_user` 只重建账号基础信息，本函数会按需给 client
+    补 access_token 或刷新 token。
     """
     client = TajiduoClient.from_user(user)
     if _access_token_fresh(user):
         client.access_token = user.access_token
         return client
+    if user.access_token and not user.cookie:
+        raise TajiduoError("accessToken 已过期，请重新登录", {"status_code": 401})
 
     access_token, refresh_token = await _refresh_singleflight(user, client)
     client.access_token = access_token
@@ -89,7 +91,10 @@ def is_auth_error(error: TajiduoError) -> bool:
     """`401/402/403` —— 塔吉多 App 端把这个 session 顶下/失效。
     业务层视作"需要重新登录"，而不是普通的"加载失败"。"""
     raw = error.raw
-    return isinstance(raw, dict) and raw.get("status_code") in _AUTH_STATUSES
+    if not isinstance(raw, dict):
+        return False
+    status = raw.get("status_code", raw.get("code"))
+    return str(status) in _AUTH_STATUS_CODES
 
 
 async def _pick_user(user_id: str, bot_id: str, game_id: str) -> NTEUser | None:
@@ -103,7 +108,7 @@ async def refresh_or_invalidate(user: NTEUser, tag: str) -> TajiduoClient | None
     try:
         return await ensure_tajiduo_client(user)
     except TajiduoError as error:
-        await NTEUser.mark_invalid_by_cookie(user.cookie, "refresh 失败")
+        await _mark_invalid_user(user, "refresh 失败")
         logger.warning(f"[NTE{tag}] 账号 {user.center_uid} 刷新失败: {error.message}")
         return None
 
@@ -151,7 +156,7 @@ async def report_call_error(
     - 401/402/403 → 视作 session 失效：mark_invalid + LOGIN_EXPIRED 重登提示
     - 其它 → LOAD_FAILED 普通加载失败提示"""
     if is_auth_error(error):
-        await NTEUser.mark_invalid_by_cookie(user.cookie, "session 失效")
+        await _mark_invalid_user(user, "session 失效")
         logger.warning(f"[NTE{tag}] 账号 {user.center_uid} 会话失效: {error.message}")
         await send_nte_notify(bot, ev, login_expired_msg)
         return
@@ -222,3 +227,10 @@ class SessionCall:
             )
             return True
         return False
+
+
+async def _mark_invalid_user(user: NTEUser, reason: str) -> None:
+    if user.cookie:
+        await NTEUser.mark_invalid_by_cookie(user.cookie, reason)
+        return
+    await NTEUser.mark_invalid_by_account(user.user_id, user.bot_id, user.center_uid, reason)

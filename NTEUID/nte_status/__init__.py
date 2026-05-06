@@ -20,13 +20,13 @@ def _yesterday() -> str:
 
 
 async def _count_yihuan_accounts() -> int:
-    """异环活跃账号数：与 `list_sign_targets_all` 同口径——绑了主游戏真角色、有 cookie、status 未失效。
+    """异环活跃账号数：与 `list_sign_targets_all` 同口径——绑了主游戏真角色、有登录凭据、status 未失效。
     被 `mark_invalid_by_cookie` 标过期的不计入，与定时签到实际跑的账号集合保持一致。"""
     async with async_maker() as session:
         stmt = select(func.count(col(NTEUser.center_uid).distinct())).where(
             col(NTEUser.game_id) == GAME_ID_YIHUAN,
             col(NTEUser.uid) != "",
-            col(NTEUser.cookie) != "",
+            (col(NTEUser.cookie) != "") | (col(NTEUser.access_token) != ""),
             (col(NTEUser.status).is_(None)) | (col(NTEUser.status) == ""),
         )
         return int((await session.execute(stmt)).scalar_one())

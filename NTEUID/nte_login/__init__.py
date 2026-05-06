@@ -7,8 +7,8 @@ from gsuid_core.models import Event
 
 from . import login_router
 from ..utils.msgs import LoginMsg, CommonMsg, send_nte_notify
-from .bind_service import view_bindings, switch_binding, get_laohu_tokens
-from .login_service import request_login, login_by_laohu_token, refresh_all_user_tokens
+from .bind_service import view_bindings, switch_binding, get_laohu_tokens, get_access_tokens
+from .login_service import request_login, login_by_laohu_token, login_by_access_token, refresh_all_user_tokens
 from ..utils.database import NTEUser
 from ..nte_role.role_cache import get_role_cache_path
 from ..utils.game_registry import PRIMARY_GAME_ID
@@ -18,6 +18,7 @@ _ = login_router  # 纯副作用 import：FastAPI 路由在模块加载时注册
 sv_nte_login = SV("nte登录")
 sv_nte_bind = SV("nte绑定")
 sv_nte_get_token = SV("nte获取laohutoken", area="DIRECT")
+sv_nte_get_access_token = SV("nte获取accesstoken", area="DIRECT")
 
 
 @sv_nte_login.on_command(("登录", "login"))
@@ -26,23 +27,30 @@ async def nte_login_cmd(bot: Bot, ev: Event):
     text = text.replace("，", ",")
 
     if text == "":
-        await request_login(bot, ev)
+        return await request_login(bot, ev)
 
-    elif "," in text:
-        tokens = text.split(",")
-        if len(tokens) == 2 and len(tokens[0]) == 32 and tokens[1].isdigit() and len(tokens[1]) == 9:
-            return await login_by_laohu_token(bot, ev, tokens[0], tokens[1])
-
-    else:
+    tokens = text.split(",")
+    if len(tokens) == 2:
+        left, right = tokens
+        if len(left) == 32 and right.isdigit() and len(right) == 9:
+            return await login_by_laohu_token(bot, ev, left, right)
         return await send_nte_notify(bot, ev, LoginMsg.USER_CENTER_LOGIN_FAILED)
+
+    if len(tokens) == 1 and len(text) >= 40:
+        return await login_by_access_token(bot, ev, text)
+
+    return await send_nte_notify(bot, ev, LoginMsg.USER_CENTER_LOGIN_FAILED)
 
 
 @sv_nte_login.on_fullmatch(("退出登录", "登出", "logout"))
 async def nte_logout_cmd(bot: Bot, ev: Event):
     user = await NTEUser.get_active(ev.user_id, ev.bot_id)
     if user is None:
-        has_history = await NTEUser.has_logged_in_history(ev.user_id, ev.bot_id)
-        return await send_nte_notify(bot, ev, CommonMsg.not_logged_in(has_history=has_history))
+        accounts = await NTEUser.list_latest_per_account(ev.user_id, ev.bot_id)
+        if not accounts:
+            has_history = await NTEUser.has_logged_in_history(ev.user_id, ev.bot_id)
+            return await send_nte_notify(bot, ev, CommonMsg.not_logged_in(has_history=has_history))
+        user = accounts[0]
 
     # 只清理当前 center_uid 下异环角色的 uid
     all_rows = await NTEUser.list_sign_targets_by_user(ev.user_id, ev.bot_id)
@@ -85,6 +93,14 @@ async def nte_logout_all_cmd(bot: Bot, ev: Event):
 )
 async def nte_get_token_cmd(bot: Bot, ev: Event):
     await get_laohu_tokens(bot, ev)
+
+
+@sv_nte_get_access_token.on_fullmatch(
+    ("获取accesstoken", "获取accessToken", "获取AccessToken", "获取ACCESS_TOKEN", "获取access_token"),
+    block=True,
+)
+async def nte_get_access_token_cmd(bot: Bot, ev: Event):
+    await get_access_tokens(bot, ev)
 
 
 @sv_nte_bind.on_command(("切换", "查看"), block=True)

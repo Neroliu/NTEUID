@@ -90,6 +90,18 @@ class _TajiduoModel(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="ignore")
 
 
+class TajiduoUserProfile(_TajiduoModel):
+    uid: int = 0
+
+
+class TajiduoUserFullInfo(_TajiduoModel):
+    user: TajiduoUserProfile = Field(default_factory=TajiduoUserProfile)
+
+    @property
+    def center_uid(self) -> str:
+        return str(self.user.uid) if self.user.uid else ""
+
+
 class TajiduoRoleRef(_TajiduoModel):
     """`getGameBindRole` / `getGameRoles` 共用的角色引用；`role_id=0` 代表该位未绑定。"""
 

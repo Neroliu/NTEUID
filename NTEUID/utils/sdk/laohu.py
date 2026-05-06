@@ -16,6 +16,10 @@ LAOHU_DEFAULT_PACKAGE = "com.pwrd.htassistant"
 LAOHU_DEFAULT_VERSION_CODE = 12
 
 
+def make_device_id() -> str:
+    return f"HT{uuid.uuid4().hex[:14].upper()}"
+
+
 class LaohuError(SdkError):
     pass
 
@@ -34,7 +38,7 @@ class LaohuDevice:
 
     def __post_init__(self) -> None:
         if not self.device_id:
-            self.device_id = "HT" + uuid.uuid4().hex[:14].upper()
+            self.device_id = make_device_id()
         if not self.adm:
             self.adm = self.device_id
 

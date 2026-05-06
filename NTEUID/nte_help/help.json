@@ -36,8 +36,16 @@
             },
             {
                 "name": "获取laohutoken",
-                "desc": "私聊获取 laohu 令牌；用于跨平台账号迁移调试",
+                "desc": "获取 laohu 令牌；用于跨平台账号迁移调试",
                 "eg": "获取laohutoken",
+                "need_ck": true,
+                "need_sk": false,
+                "need_admin": false
+            },
+            {
+                "name": "获取accessToken",
+                "desc": "获取当前仍有效的塔吉多 App accessToken；失效则不输出",
+                "eg": "获取accessToken",
                 "need_ck": true,
                 "need_sk": false,
                 "need_admin": false

@@ -6,6 +6,7 @@ import hashlib
 from typing import Any
 
 from .base import BaseSdkClient
+from .laohu import make_device_id
 from ..cache import timed_async_cache
 from ..constants import (
     NOTICE_COLUMN_NAME,
@@ -37,6 +38,7 @@ from .tajiduo_model import (
     TeamRecommendation,
     AchievementProgress,
     CommunitySignResult,
+    TajiduoUserFullInfo,
     _parse,
     _PostAuthor,
     _expect_dict,
@@ -82,10 +84,10 @@ class TajiduoClient(_TajiduoBase):
 
     @classmethod
     def from_user(cls, user: Any) -> "TajiduoClient":
-        """业务层每次调 `from_user` 都会拿到一个只带 refresh_token 的 client；
-        调用业务接口前必须先 `refresh_session()` 换出新的 access_token。"""
+        """按本地账号重建 client；access_token 是否复用或刷新交给 session 层。"""
+        device_id = user.dev_code or make_device_id()
         return cls(
-            device_id=user.dev_code,
+            device_id=device_id,
             refresh_token=user.cookie,
             center_uid=user.center_uid,
         )
@@ -177,6 +179,14 @@ class TajiduoClient(_TajiduoBase):
             center_uid=self.center_uid,
             raw=data,
         )
+
+    async def get_user_full_info(self) -> TajiduoUserFullInfo:
+        data = await self._request(
+            "/usercenter/api/getUserFullInfo",
+            method="GET",
+            headers=self._authed_headers(),
+        )
+        return _parse(TajiduoUserFullInfo, _expect_dict(data, "用户信息格式错误"), "用户信息格式错误")
 
     async def app_signin(self, community_id: str = TAJIDUO_COMMUNITY_APP) -> CommunitySignResult:
         data = await self._request(

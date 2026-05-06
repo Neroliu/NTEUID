@@ -78,7 +78,7 @@ class NTEUser(User, table=True):
                 cls.bot_id == bot_id,
                 col(cls.game_id) == PRIMARY_GAME_ID,
                 col(cls.uid) != "",
-                col(cls.cookie) != "",
+                (col(cls.cookie) != "") | (col(cls.access_token) != ""),
                 (col(cls.status).is_(None)) | (col(cls.status) == ""),
             )
             .order_by(col(cls.updated_at).desc())
@@ -94,13 +94,17 @@ class NTEUser(User, table=True):
         user_id: str,
         bot_id: str,
     ) -> list[T_NTEUser]:
-        """【刷新令牌专用】按 center_uid 去重后每账号返回 updated_at 最新一行（忽略
-        status）。同 center_uid 多角色共享 cookie/laohu_token，刷一次就够了，不用每个
-        角色都跑一遍。不要拿来做业务查询——这个方法返回的行可能来自任意注册游戏。
+        """按 center_uid 去重后每账号返回 updated_at 最新一行（忽略 status）。
+        同 center_uid 多角色共享账号凭据，刷一次就够了，不用每个角色都跑一遍。
+        不要拿来做单游戏业务查询——这个方法返回的行可能来自任意注册游戏。
         """
         result = await session.execute(
             select(cls)
-            .where(cls.user_id == user_id, cls.bot_id == bot_id, col(cls.cookie) != "")
+            .where(
+                cls.user_id == user_id,
+                cls.bot_id == bot_id,
+                (col(cls.cookie) != "") | (col(cls.access_token) != ""),
+            )
             .order_by(col(cls.updated_at).desc())
         )
         seen: set[str] = set()
@@ -129,7 +133,7 @@ class NTEUser(User, table=True):
                 cls.user_id == user_id,
                 cls.bot_id == bot_id,
                 col(cls.uid) != "",
-                col(cls.cookie) != "",
+                (col(cls.cookie) != "") | (col(cls.access_token) != ""),
                 (col(cls.status).is_(None)) | (col(cls.status) == ""),
             )
             .order_by(col(cls.updated_at).desc())
@@ -148,7 +152,7 @@ class NTEUser(User, table=True):
         result = await session.execute(
             select(cls).where(
                 col(cls.uid) != "",
-                col(cls.cookie) != "",
+                (col(cls.cookie) != "") | (col(cls.access_token) != ""),
                 (col(cls.status).is_(None)) | (col(cls.status) == ""),
             )
         )
@@ -208,6 +212,82 @@ class NTEUser(User, table=True):
 
     @classmethod
     @with_session
+    async def upsert_access_token_account(
+        cls: type[T_NTEUser],
+        session: AsyncSession,
+        user_id: str,
+        bot_id: str,
+        center_uid: str,
+        access_token: str,
+        dev_code: str,
+        entries: list[tuple[str, str, str]],
+    ) -> None:
+        """保存只有 center_uid + access_token 的低配登录态。
+
+        access_token 不能续期，所以这里只更新可确定的账号字段，不清空旧的
+        refreshToken / laohu 凭据；角色拉不到时保留或创建一条账号壳，避免后续查看、
+        登出这类账号级操作把它当作完全未登录。
+        """
+        now = datetime.now()
+        result = await session.execute(
+            select(cls).where(
+                col(cls.user_id) == user_id,
+                col(cls.bot_id) == bot_id,
+                col(cls.center_uid) == center_uid,
+            )
+        )
+        rows = list(result.scalars().all())
+        for row in rows:
+            row.status = ""
+            row.access_token = access_token
+            row.access_token_updated_at = now
+            row.dev_code = dev_code or row.dev_code
+            row.updated_at = now
+
+        current: dict[tuple[str, str], T_NTEUser] = {(row.game_id, row.uid): row for row in rows}
+        if entries:
+            for row in rows:
+                if not row.uid:
+                    await session.delete(row)
+            for uid, role_name, game_id in entries:
+                row = current.get((game_id, uid))
+                if row is not None:
+                    row.role_name = role_name
+                    continue
+                session.add(
+                    cls(
+                        user_id=user_id,
+                        bot_id=bot_id,
+                        center_uid=center_uid,
+                        uid=uid,
+                        role_name=role_name,
+                        game_id=game_id,
+                        status="",
+                        dev_code=dev_code,
+                        access_token=access_token,
+                        access_token_updated_at=now,
+                    )
+                )
+            return
+
+        if not rows:
+            session.add(
+                cls(
+                    user_id=user_id,
+                    bot_id=bot_id,
+                    center_uid=center_uid,
+                    uid="",
+                    role_name="",
+                    game_id=PRIMARY_GAME_ID,
+                    status="",
+                    dev_code=dev_code,
+                    access_token=access_token,
+                    access_token_updated_at=now,
+                )
+            )
+
+    @classmethod
+    @with_session
     async def update_tokens(
         cls: type[T_NTEUser],
         session: AsyncSession,
@@ -240,7 +320,7 @@ class NTEUser(User, table=True):
         result = await session.execute(
             select(cls).where(
                 col(cls.uid) != "",
-                col(cls.cookie) != "",
+                (col(cls.cookie) != "") | (col(cls.access_token) != ""),
                 (col(cls.status).is_(None)) | (col(cls.status) == ""),
                 col(cls.auto_sign) == "on",
             )
@@ -258,14 +338,14 @@ class NTEUser(User, table=True):
         *,
         exclude_game_ids: set[str] | None = None,
     ) -> dict[str, int]:
-        """切换 (user_id, bot_id) 下"有效签到行"（uid/cookie 非空、无 status）的 auto_sign。
+        """切换 (user_id, bot_id) 下"有效签到行"（uid/登录凭据非空、无 status）的 auto_sign。
         `exclude_game_ids` 命中的行**不动**（用于跳过被关闭签到的游戏）。返回每个被改动游戏的行数。
         """
         conds = [
             cls.user_id == user_id,
             cls.bot_id == bot_id,
             col(cls.uid) != "",
-            col(cls.cookie) != "",
+            (col(cls.cookie) != "") | (col(cls.access_token) != ""),
             (col(cls.status).is_(None)) | (col(cls.status) == ""),
         ]
         if exclude_game_ids:
@@ -341,17 +421,17 @@ class NTEUser(User, table=True):
         user_id: str,
         bot_id: str,
     ) -> bool:
-        """是否曾经成功登录过任何塔吉多账号（cookie 非空），不论当前是否被标失效。
+        """是否曾经成功登录过任何塔吉多账号（登录凭据非空），不论当前是否被标失效。
 
         给 `not_logged_in` 文案分流用：True 表示业务层应建议先发【刷新令牌】尝试救活
-        失效的 refresh_token；False 表示从未登录，应直接发【登录】。
+        失效的登录态；False 表示从未登录，应直接发【登录】。
         """
         result = await session.execute(
             select(cls)
             .where(
                 cls.user_id == user_id,
                 cls.bot_id == bot_id,
-                col(cls.cookie) != "",
+                (col(cls.cookie) != "") | (col(cls.access_token) != ""),
             )
             .limit(1)
         )
@@ -408,6 +488,26 @@ class NTEUser(User, table=True):
         reason: str,
     ) -> None:
         await session.execute(update(cls).where(col(cls.cookie) == cookie).values(status=reason))
+
+    @classmethod
+    @with_session
+    async def mark_invalid_by_account(
+        cls: type[T_NTEUser],
+        session: AsyncSession,
+        user_id: str,
+        bot_id: str,
+        center_uid: str,
+        reason: str,
+    ) -> None:
+        await session.execute(
+            update(cls)
+            .where(
+                col(cls.user_id) == user_id,
+                col(cls.bot_id) == bot_id,
+                col(cls.center_uid) == center_uid,
+            )
+            .values(status=reason)
+        )
 
 
 class NTESignRecord(BaseIDModel, table=True):

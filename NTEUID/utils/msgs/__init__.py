@@ -31,6 +31,7 @@ class LoginMsg:
     NO_SUPPORTED_GAME = "登录失败，请绑定插件支持的游戏"
     SUCCESS = "登录成功"
     TAJIDUO_SUCCESS = "塔吉多登录成功"
+    ACCESS_TOKEN_SHELL_SUCCESS = "登录成功，角色信息暂未同步"
     LINK_COPY = "请复制地址到浏览器打开"
     LINK_QR = "请扫描下方二维码获取登录地址，并复制地址到浏览器打开\n"
     MOBILE_INVALID = "手机号格式错误"
