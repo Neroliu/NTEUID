@@ -12,8 +12,7 @@ from gsuid_core.utils.image.convert import convert_img
 from ..utils.msgs import GuideMsg, send_nte_notify
 from ..utils.name_convert import alias_to_char_name, char_name_to_char_id
 from ..nte_config.nte_config import NTEConfig
-
-GUIDE_PATH = Path(__file__).parent / "texture2d"
+from ..utils.resource.RESOURCE_PATH import GUIDE_PATH
 
 
 async def get_guide(bot: Bot, ev: Event, char_name: str) -> None:
