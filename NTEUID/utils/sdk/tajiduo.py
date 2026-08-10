@@ -300,16 +300,14 @@ class TajiduoClient(_TajiduoBase):
             "游戏补签信息格式错误",
         )
 
-    async def game_sign_resign(self, role_id: str, game_id: str) -> dict:
-        """单角色游戏补签：领取「当日签到后下一日」的奖励，扣除 200 呗果积点。
-        服务端负责校验今日已签 / 存在漏签 / 本月次数未超限，失败抛 `TajiduoError`。"""
-        data = await self._request(
+    async def game_sign_resign(self, role_id: str, game_id: str) -> None:
+        """游戏补签。成功响应 `{"code": 0, "msg": "ok", "ok": true}`；失败抛 `TajiduoError`。"""
+        await self._request(
             TAJIDUO_RESIGN_PATH,
             method="POST",
             body={"roleId": role_id, "gameId": game_id},
             headers=self._authed_headers(),
         )
-        return _expect_dict(data, "游戏补签返回格式错误")
 
     async def get_sign_reward_records(self, game_id: str) -> list[SignRewardRecord]:
         """已领取的游戏签到奖励历史（每条一件物品）。"""

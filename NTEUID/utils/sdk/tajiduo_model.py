@@ -10,7 +10,12 @@ from .base import SdkError
 
 
 class TajiduoError(SdkError):
-    pass
+    @property
+    def server_message(self) -> str | None:
+        if self.raw is None:
+            return None
+        message = self.raw.get("msg")
+        return message if isinstance(message, str) and message else None
 
 
 class CharQuality(str, Enum):

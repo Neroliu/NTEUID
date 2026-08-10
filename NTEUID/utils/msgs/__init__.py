@@ -94,16 +94,10 @@ class ResignMsg:
     """游戏签到补签（补签）相关文案。"""
 
     FAILED = "补签失败，稍后再试"
-    ALREADY_DONE = "该角色今天已经补签过啦"
 
     @classmethod
-    def usage(cls, game_label: str) -> str:
-        p = nte_prefix()
-        return f"用法：{p}{game_label}补签 [角色ID/角色名]，例如 {p}异环补签 214075351008"
-
-    @classmethod
-    def role_not_found(cls, game_label: str) -> str:
-        return f"未找到该{game_label}角色，请检查角色ID或名称\n{cls.usage(game_label)}"
+    def role_not_found(cls, role_id: str) -> str:
+        return f"未找到角色 ID：{role_id}"
 
     @classmethod
     def not_signed_today(cls) -> str:
@@ -112,14 +106,6 @@ class ResignMsg:
     @classmethod
     def no_missed(cls) -> str:
         return "本月签到无漏签，无需补签"
-
-    @classmethod
-    def no_quota(cls) -> str:
-        return "本月补签次数已用完，每月 1 日 00:00 刷新"
-
-    @classmethod
-    def coin_not_enough(cls, cost: int) -> str:
-        return f"呗果积点不足，补签需要 {cost} 呗果积点"
 
     @classmethod
     def busy(cls) -> str:
@@ -131,15 +117,8 @@ class ResignMsg:
         role_name: str,
         uid: str,
         cost: int,
-        reward: str = "",
     ) -> str:
-        lines = [
-            f"补签成功：{role_name}（{uid}）",
-            f"已消耗 {cost} 呗果积点，领取当日签到后下一日奖励",
-        ]
-        if reward:
-            lines.append(reward)
-        return "\n".join(lines)
+        return f"补签成功：{role_name}（{uid}）\n已消耗 {cost} 呗果积点，领取当日签到后下一日奖励"
 
 
 class RoleMsg:
