@@ -46,8 +46,10 @@ async def run_sign_calendar(bot: Bot, ev: Event, game_id: str) -> None:
         # 接口不可用时用签到状态接口的已用次数 + 固定上限兜底。
         try:
             info = await client.get_game_sign_resign_info(game_id)
+            resign_coin = info.coin
             resign_remaining = max(0, info.re_sign_limit - info.re_sign_cnt)
         except TajiduoError:
+            resign_coin = None
             resign_remaining = max(0, RESIGN_MONTHLY_LIMIT - state.re_sign_cnt)
         # 漏签 = 本月总天数 - 累计签到 - 今日未签时再减 1（不计今日）。
         missed_days = max(0, state.day - state.days - (0 if state.today_sign else 1))
@@ -59,6 +61,7 @@ async def run_sign_calendar(bot: Bot, ev: Event, game_id: str) -> None:
             user.role_name,
             user.uid,
             game_id,
+            resign_coin=resign_coin,
             resign_remaining=resign_remaining,
             missed_days=missed_days,
         )

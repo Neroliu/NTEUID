@@ -77,6 +77,7 @@ TEXTURE_PATH = Path(__file__).parent / "texture2d" / "sign"
 CELL_ENABLE = open_texture(TEXTURE_PATH / "cell_enable.png", (CELL_W, CELL_H))
 CELL_DISABLE = open_texture(TEXTURE_PATH / "cell_disable.png", (CELL_W, CELL_H))
 CELL_DONE = open_texture(TEXTURE_PATH / "cell_done.png", (CELL_W, CELL_H))
+TATA_COIN_ICON = open_texture(TEXTURE_PATH / "coin_icon.png", (vw(26), vw(26)))
 
 _SIGN_HEADER_RAW = open_texture(TEXTURE_PATH / "sign_header.png")
 
@@ -168,11 +169,6 @@ def _draw_summary_row(
     resign_remaining: int = 0,
     missed_days: int = 0,
 ) -> None:
-    """5 列统计：本月 / 累计签到 / 今日 / 可补签 / 漏签。直接画在烘焙暗带上，不重画底。
-
-    `resign_remaining` 为服务端返回的剩余补签次数，`missed_days` 为本月漏签天数
-    （今日未签时不计今日）。
-    """
     x, y = xy
     items = [
         (f"{state.month}月", "本月"),
@@ -208,6 +204,7 @@ async def draw_sign_calendar_img(
     role_name: str,
     uid: str,
     game_id: str,
+    resign_coin: int | None,
     resign_remaining: int = 0,
     missed_days: int = 0,
 ):
@@ -238,6 +235,14 @@ async def draw_sign_calendar_img(
 
     draw = ImageDraw.Draw(canvas)
     canvas.alpha_composite(SIGN_LOGO, ((WIDTH - SIGN_LOGO.width) // 2, body_top))
+    canvas.alpha_composite(TATA_COIN_ICON, (870, body_top + 74))
+    draw.text((952, body_top + 62), "塔塔币", font=summary_label_font, fill=COLOR_SUMMARY_LABEL)
+    draw.text(
+        (952, body_top + 96),
+        str(resign_coin) if resign_coin is not None else "--",
+        font=summary_value_font,
+        fill=COLOR_WHITE,
+    )
 
     panel_layer = Image.new("RGBA", (PANEL_W, panel_h), (0, 0, 0, 0))
     panel_layer.alpha_composite(baked_dark, (0, 0))
