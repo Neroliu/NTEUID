@@ -49,10 +49,11 @@ class EquipmentView(Protocol):
 
 class ScoreResult(Protocol):
     """一次角色评分的完整输出：总分/评级入库排序，判定方法驱动卡片词条高亮。
-    `display` 是角色卡上的总分文本（如 "87分" / "毕业度92.5%"）；榜单类卡片始终显示整数 `score`。"""
+    `display` 是角色卡上的总分文本（如 "87分" / "毕业度92.5%"）；榜单类卡片直接画 `score`
+    数值，可带小数（如 320.35），整数评分包返回 int 即可。"""
 
     @property
-    def score(self) -> int: ...
+    def score(self) -> float: ...
 
     @property
     def display(self) -> str: ...
