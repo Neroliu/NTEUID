@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-import time
+from collections.abc import Iterable
+
+from pydantic import ValidationError
 
 from .gacha_model import (
     NTEGachaItem,
@@ -8,10 +10,13 @@ from .gacha_model import (
     NTEGachaSummary,
     NTEGachaOverview,
 )
+from .archive_model import POOL_NAMES, PoolType, NTEGachaPool, NTEGachaRecord, NTEGachaArchive
 from ..utils.name_convert import name_by_id
 from ..utils.sdk.taptap_model import GachaSummary as TaptapGachaSummary
-from ..utils.sdk.tajiduo_model import TajiduoGachaSummary
+from ..utils.sdk.tajiduo_model import TajiduoError, TajiduoGachaPool
 from ..utils.sdk.xiaoheihe_model import LotteryAnalysis
+
+_TAJIDUO_POOL_TYPES: dict[str, PoolType] = {name: pool_type for pool_type, name in POOL_NAMES.items()}
 
 
 def tap_to_nte(summary: TaptapGachaSummary) -> NTEGachaSummary:
@@ -99,39 +104,57 @@ def xhh_to_nte(analysis: LotteryAnalysis) -> NTEGachaSummary:
     )
 
 
-def tjd_to_nte(summary: TajiduoGachaSummary) -> NTEGachaSummary:
-    """塔吉多官方抽卡分析 → NTE 通用 schema。
+def tjd_to_archive(uid: str, pools: Iterable[TajiduoGachaPool], updated_at: int) -> NTEGachaArchive:
+    normalized: dict[PoolType, NTEGachaPool] = {}
+    try:
+        for pool in pools:
+            if pool.tab not in _TAJIDUO_POOL_TYPES:
+                raise TajiduoError(f"未识别的官方卡池：{pool.tab}")
+            normalized[_TAJIDUO_POOL_TYPES[pool.tab]] = NTEGachaPool(
+                records=[
+                    NTEGachaRecord(item_id=detail.charid, time_ms=detail.timeStamp, pity=detail.rareCount)
+                    for detail in pool.details
+                ]
+            )
+        return NTEGachaArchive(
+            format="nteuid-gacha",
+            version=1,
+            uid=uid,
+            source="tajiduo",
+            updated_at=updated_at,
+            pools=normalized,
+        )
+    except ValidationError as error:
+        raise TajiduoError("官方抽卡记录格式错误") from error
 
-    item_name 走 char_meta/fork_meta 反查（接口本身不返）；timeStamp 毫秒转秒；
-    avg_pity 字符串 '56.0' → 56；池 begin/end 接口不给，留 0。
-    """
-    total_pull = sum(p.drawCount for p in summary.gachaDetails)
-    total_ssr = sum(p.rareCount for p in summary.gachaDetails)
+
+def archive_to_nte(archive: NTEGachaArchive) -> NTEGachaSummary:
+    total_pull = sum(pool.draw_count for pool in archive.pools.values())
+    total_ssr = sum(pool.s_count for pool in archive.pools.values())
     overview = NTEGachaOverview(total_pull_count=total_pull, total_ssr_count=total_ssr) if total_pull > 0 else None
 
     sections = [
         NTEGachaSection(
-            banner_name=pool.tab,
-            banner_type=pool.tab,
-            total_pull_count=pool.drawCount,
-            ssr_count=pool.rareCount,
-            avg_pity=int(float(pool.average)) if pool.average else 0,
+            banner_name=POOL_NAMES[pool_type],
+            banner_type=POOL_NAMES[pool_type],
+            total_pull_count=pool.draw_count,
+            ssr_count=pool.s_count,
+            avg_pity=int(pool.average),
             items=[
                 NTEGachaItem(
-                    item_id=d.charid,
-                    item_name=name_by_id(d.charid),
-                    pity=d.rareCount,
-                    pull_time_ts=d.timeStamp // 1000,
+                    item_id=record.item_id,
+                    item_name=name_by_id(record.item_id),
+                    pity=record.pity,
+                    pull_time_ts=record.time_ms // 1000,
                 )
-                for d in pool.details
+                for record in pool.records
             ],
         )
-        for pool in summary.gachaDetails
+        for pool_type, pool in archive.pools.items()
     ]
 
     return NTEGachaSummary(
         overview=overview,
         sections=sections,
-        last_updated_ts=int(time.time()),
-        luck_title=summary.luckTitle,
+        last_updated_ts=archive.updated_at,
     )

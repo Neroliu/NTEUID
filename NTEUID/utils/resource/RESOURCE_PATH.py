@@ -9,6 +9,7 @@ MAIN_PATH = get_res_path() / "NTEUID"
 sys.path.append(str(MAIN_PATH))
 
 CONFIG_PATH = MAIN_PATH / "config.json"
+GACHA_PATH = MAIN_PATH / "gacha"
 
 # 角色资料
 RESOURCE_PATH = MAIN_PATH / "resource"

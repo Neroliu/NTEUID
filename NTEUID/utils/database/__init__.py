@@ -97,9 +97,11 @@ class NTEUser(User, table=True):
         session: AsyncSession,
         user_id: str,
         bot_id: str,
+        *,
+        include_invalid: bool = False,
     ) -> T_NTEUser | None:
-        """主游戏的一条真角色行（`uid != ""`）；没有就返回 None，业务层按"未登录"处理。"""
-        result = await session.execute(
+        """主游戏的最新角色；include_invalid 用于读取失效账号的本地记录。"""
+        stmt = (
             select(cls)
             .where(
                 cls.user_id == user_id,
@@ -107,11 +109,13 @@ class NTEUser(User, table=True):
                 col(cls.game_id) == PRIMARY_GAME_ID,
                 col(cls.uid) != "",
                 (col(cls.cookie) != "") | (col(cls.access_token) != ""),
-                (col(cls.status).is_(None)) | (col(cls.status) == ""),
             )
             .order_by(col(cls.updated_at).desc())
             .limit(1)
         )
+        if not include_invalid:
+            stmt = stmt.where((col(cls.status).is_(None)) | (col(cls.status) == ""))
+        result = await session.execute(stmt)
         return result.scalars().first()
 
     @classmethod
