@@ -153,7 +153,8 @@ async def nte_compress_role_panel_imgs(bot: Bot, ev: Event):
 @sv_nte_role_rank.on_regex(
     # 交替：board 分支(可选前置 bot)+「最强排行」字面量 = 每角色最强榜；否则走原单角色排名(scope 中置 bot/群)
     rf"^(?:(?P<board_bot>bot)?(?P<board>最强排行)"
-    rf"|(?P<char_name>{COMMAND_NAME_PATTERN}?)(?P<scope>bot|群)?(?:评分)?(?:排名|排行榜|排行))$",
+    rf"|(?P<char_name>{COMMAND_NAME_PATTERN}?)(?P<scope>bot|群)?"
+    rf"(?:最强)?(?:评分)?(?:排名|排行榜|排行))$",
     block=True,
 )
 async def nte_role_rank(bot: Bot, ev: Event):
